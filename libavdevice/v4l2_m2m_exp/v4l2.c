@@ -32,7 +32,7 @@
 
 #include <stdatomic.h>
 
-#include "v4l2-common.h"
+#include "../v4l2-common.h"
 #include <dirent.h>
 
 #if CONFIG_LIBV4L2
@@ -1124,7 +1124,7 @@ static const AVOption options[] = {
     { NULL },
 };
 
-static const AVClass v4l2_class_exp =
+static const AVClass v4l2_m2m_exp_class =
 {
     .class_name = "v4l2m2m_exp indev",
     .item_name  = av_default_item_name,
@@ -1133,9 +1133,9 @@ static const AVClass v4l2_class_exp =
     .category   = AV_CLASS_CATEGORY_DEVICE_VIDEO_INPUT,
 };
 
-AVInputFormat ff_v4l2_demuxer_exp =
+AVInputFormat ff_v4l2_m2m_exp_demuxer =
 {
-    .name           = "video4Linux2Mem2MemExp,v4l2m2m_exp",
+    .name           = "v4l2m2m_exp",
     .long_name      = NULL_IF_CONFIG_SMALL("Video4Linux2Mem2MemExp buffer export device grab"),
     .priv_data_size = sizeof(struct video_data),
     .read_probe     = v4l2_read_probe,
@@ -1144,5 +1144,5 @@ AVInputFormat ff_v4l2_demuxer_exp =
     .read_close     = v4l2_read_close,
     .get_device_list = v4l2_get_device_list,
     .flags          = AVFMT_NOFILE,
-    .priv_class     = &v4l2_class_exp,
+    .priv_class     = &v4l2_m2m_exp_class,
 };
