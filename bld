@@ -2,4 +2,4 @@
 
 TOOLCHAIN=/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/host/bin/arm-buildroot-linux-uclibcgnueabihf-
 
-./configure   --prefix="/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr" --arch=arm --target-os=linux  --cross-prefix=$TOOLCHAIN  --extra-ldflags="-L/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr/lib" --extra-cflags="-I/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr/include" --enable-shared --enable-gpl
+./configure   --prefix="/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr" --arch=arm --target-os=linux  --cross-prefix=$TOOLCHAIN  --extra-ldflags="-L/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr/lib" --extra-cflags="-I/media/ghost/7d457a5d-f21d-48fc-b6f6-5c91da2b3d91/buildroot-2022.02.9/output/target/usr/include" --enable-shared --enable-gpl --disable-decoders --disable-muxers --disable-demuxers --disable-filters --disable-parsers --disable-encoders --enable-encoder=h264_v4l2m2m --enable-encoder=h264_v4l2m2m_exp

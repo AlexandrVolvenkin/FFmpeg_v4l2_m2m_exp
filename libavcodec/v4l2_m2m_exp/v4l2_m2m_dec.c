@@ -30,9 +30,9 @@
 #include "libavcodec/decode.h"
 #include "libavcodec/internal.h"
 
-#include "v4l2_context.h"
-#include "v4l2_m2m.h"
-#include "v4l2_fmt.h"
+#include "v4l2_m2m_exp/v4l2_context.h"
+#include "v4l2_m2m_exp/v4l2_m2m.h"
+#include "v4l2_m2m_exp/v4l2_fmt.h"
 
 static int v4l2_try_start(AVCodecContext *avctx)
 {

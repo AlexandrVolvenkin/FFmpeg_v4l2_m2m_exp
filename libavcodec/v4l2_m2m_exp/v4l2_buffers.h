@@ -27,7 +27,7 @@
 #include <stdatomic.h>
 #include <linux/videodev2.h>
 
-#include "avcodec.h"
+#include "../avcodec.h"
 
 enum V4L2Buffer_status {
     V4L2BUF_AVAILABLE,

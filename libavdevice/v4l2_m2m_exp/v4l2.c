@@ -1124,17 +1124,19 @@ static const AVOption options[] = {
     { NULL },
 };
 
-static const AVClass v4l2_class = {
-    .class_name = "V4L2 indev",
+static const AVClass v4l2_class_exp =
+{
+    .class_name = "v4l2m2m_exp indev",
     .item_name  = av_default_item_name,
     .option     = options,
     .version    = LIBAVUTIL_VERSION_INT,
     .category   = AV_CLASS_CATEGORY_DEVICE_VIDEO_INPUT,
 };
 
-AVInputFormat ff_v4l2_demuxer = {
-    .name           = "video4linux2,v4l2",
-    .long_name      = NULL_IF_CONFIG_SMALL("Video4Linux2 device grab"),
+AVInputFormat ff_v4l2_demuxer_exp =
+{
+    .name           = "video4Linux2Mem2MemExp,v4l2m2m_exp",
+    .long_name      = NULL_IF_CONFIG_SMALL("Video4Linux2Mem2MemExp buffer export device grab"),
     .priv_data_size = sizeof(struct video_data),
     .read_probe     = v4l2_read_probe,
     .read_header    = v4l2_read_header,
@@ -1142,5 +1144,5 @@ AVInputFormat ff_v4l2_demuxer = {
     .read_close     = v4l2_read_close,
     .get_device_list = v4l2_get_device_list,
     .flags          = AVFMT_NOFILE,
-    .priv_class     = &v4l2_class,
+    .priv_class     = &v4l2_class_exp,
 };

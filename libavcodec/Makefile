@@ -154,6 +154,10 @@ OBJS-$(CONFIG_VP3DSP)                  += vp3dsp.o
 OBJS-$(CONFIG_VP56DSP)                 += vp56dsp.o
 OBJS-$(CONFIG_VP8DSP)                  += vp8dsp.o
 OBJS-$(CONFIG_V4L2_M2M)                += v4l2_m2m.o v4l2_context.o v4l2_buffers.o v4l2_fmt.o
+OBJS-$(CONFIG_V4L2_M2M_EXP)                += v4l2_m2m_exp/v4l2_m2m.o \
+                                                  v4l2_m2m_exp/v4l2_context.o \
+                                                  v4l2_m2m_exp/v4l2_buffers.o \
+                                                  v4l2_m2m_exp/v4l2_fmt.o
 OBJS-$(CONFIG_WMA_FREQS)               += wma_freqs.o
 OBJS-$(CONFIG_WMV2DSP)                 += wmv2dsp.o
 
@@ -385,6 +389,7 @@ OBJS-$(CONFIG_H264_VAAPI_ENCODER)      += vaapi_encode_h264.o h264_levels.o
 OBJS-$(CONFIG_H264_VIDEOTOOLBOX_ENCODER) += videotoolboxenc.o
 OBJS-$(CONFIG_H264_V4L2M2M_DECODER)    += v4l2_m2m_dec.o
 OBJS-$(CONFIG_H264_V4L2M2M_ENCODER)    += v4l2_m2m_enc.o
+OBJS-$(CONFIG_H264_V4L2M2M_EXP_ENCODER)    += v4l2_m2m_exp/v4l2_m2m_enc.o
 OBJS-$(CONFIG_HAP_DECODER)             += hapdec.o hap.o
 OBJS-$(CONFIG_HAP_ENCODER)             += hapenc.o hap.o
 OBJS-$(CONFIG_HCA_DECODER)             += hcadec.o
@@ -1213,6 +1218,9 @@ SKIPHEADERS-$(CONFIG_VAAPI)            += vaapi_decode.h vaapi_hevc.h vaapi_enco
 SKIPHEADERS-$(CONFIG_VDPAU)            += vdpau.h vdpau_internal.h
 SKIPHEADERS-$(CONFIG_VIDEOTOOLBOX)     += videotoolbox.h vt_internal.h
 SKIPHEADERS-$(CONFIG_V4L2_M2M)         += v4l2_buffers.h v4l2_context.h v4l2_m2m.h
+SKIPHEADERS-$(CONFIG_V4L2_M2M_EXP)         += v4l2_m2m_exp/v4l2_buffers.h  \
+                                                  v4l2_m2m_exp/v4l2_context.h  \
+                                                  v4l2_m2m_exp/v4l2_m2m.h
 
 TESTPROGS = avpacket                                                    \
             celp_math                                                   \
