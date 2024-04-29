@@ -30,21 +30,21 @@
 #include "libavcodec/decode.h"
 #include "libavcodec/internal.h"
 
-#include "v4l2_m2m_exp/v4l2_context.h"
-#include "v4l2_m2m_exp/v4l2_m2m.h"
-#include "v4l2_m2m_exp/v4l2_fmt.h"
+#include "v4l2_m2m_exp/v4l2_m2m_exp_context.h"
+#include "v4l2_m2m_exp/v4l2_m2m_exp_m2m.h"
+#include "v4l2_m2m_exp/v4l2_m2m_exp_fmt.h"
 
-static int v4l2_try_start(AVCodecContext *avctx)
+static int v4l2_m2m_exp_try_start(AVCodecContext *avctx)
 {
     V4L2m2mContext *s = ((V4L2m2mPriv*)avctx->priv_data)->context;
     V4L2Context *const capture = &s->capture;
     V4L2Context *const output = &s->output;
-    struct v4l2_selection selection = { 0 };
+    struct v4l2_m2m_exp_selection selection = { 0 };
     int ret;
 
     /* 1. start the output process */
     if (!output->streamon) {
-        ret = ff_v4l2_context_set_status(output, VIDIOC_STREAMON);
+        ret = ff_v4l2_m2m_exp_context_set_status(output, VIDIOC_STREAMON);
         if (ret < 0) {
             av_log(avctx, AV_LOG_DEBUG, "VIDIOC_STREAMON on output context\n");
             return ret;
@@ -63,7 +63,7 @@ static int v4l2_try_start(AVCodecContext *avctx)
     }
 
     /* 2.1 update the AVCodecContext */
-    avctx->pix_fmt = ff_v4l2_format_v4l2_to_avfmt(capture->format.fmt.pix_mp.pixelformat, AV_CODEC_ID_RAWVIDEO);
+    avctx->pix_fmt = ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(capture->format.fmt.pix_mp.pixelformat, AV_CODEC_ID_RAWVIDEO);
     capture->av_pix_fmt = avctx->pix_fmt;
 
     /* 3. set the crop parameters */
@@ -85,7 +85,7 @@ static int v4l2_try_start(AVCodecContext *avctx)
 
     /* 4. init the capture context now that we have the capture format */
     if (!capture->buffers) {
-        ret = ff_v4l2_context_init(capture);
+        ret = ff_v4l2_m2m_exp_context_init(capture);
         if (ret) {
             av_log(avctx, AV_LOG_ERROR, "can't request capture buffers\n");
             return AVERROR(ENOMEM);
@@ -93,7 +93,7 @@ static int v4l2_try_start(AVCodecContext *avctx)
     }
 
     /* 5. start the capture process */
-    ret = ff_v4l2_context_set_status(capture, VIDIOC_STREAMON);
+    ret = ff_v4l2_m2m_exp_context_set_status(capture, VIDIOC_STREAMON);
     if (ret) {
         av_log(avctx, AV_LOG_DEBUG, "VIDIOC_STREAMON, on capture context\n");
         return ret;
@@ -102,7 +102,7 @@ static int v4l2_try_start(AVCodecContext *avctx)
     return 0;
 }
 
-static int v4l2_prepare_decoder(V4L2m2mContext *s)
+static int v4l2_m2m_exp_prepare_decoder(V4L2m2mContext *s)
 {
     struct v4l2_event_subscription sub;
     V4L2Context *output = &s->output;
@@ -133,7 +133,7 @@ static int v4l2_prepare_decoder(V4L2m2mContext *s)
     return 0;
 }
 
-static int v4l2_receive_frame(AVCodecContext *avctx, AVFrame *frame)
+static int v4l2_m2m_exp_receive_frame(AVCodecContext *avctx, AVFrame *frame)
 {
     V4L2m2mContext *s = ((V4L2m2mPriv*)avctx->priv_data)->context;
     V4L2Context *const capture = &s->capture;
@@ -149,7 +149,7 @@ static int v4l2_receive_frame(AVCodecContext *avctx, AVFrame *frame)
     if (s->draining)
         goto dequeue;
 
-    ret = ff_v4l2_context_enqueue_packet(output, &s->buf_pkt);
+    ret = ff_v4l2_m2m_exp_context_enqueue_packet(output, &s->buf_pkt);
     if (ret < 0 && ret != AVERROR(EAGAIN))
         goto fail;
 
@@ -158,7 +158,7 @@ static int v4l2_receive_frame(AVCodecContext *avctx, AVFrame *frame)
         av_packet_unref(&s->buf_pkt);
 
     if (!s->draining) {
-        ret = v4l2_try_start(avctx);
+        ret = v4l2_m2m_exp_try_start(avctx);
         if (ret) {
             /* cant recover */
             if (ret != AVERROR(ENOMEM))
@@ -168,20 +168,20 @@ static int v4l2_receive_frame(AVCodecContext *avctx, AVFrame *frame)
     }
 
 dequeue:
-    return ff_v4l2_context_dequeue_frame(capture, frame, -1);
+    return ff_v4l2_m2m_exp_context_dequeue_frame(capture, frame, -1);
 fail:
     av_packet_unref(&s->buf_pkt);
     return ret;
 }
 
-static av_cold int v4l2_decode_init(AVCodecContext *avctx)
+static av_cold int v4l2_m2m_exp_decode_init(AVCodecContext *avctx)
 {
     V4L2Context *capture, *output;
     V4L2m2mContext *s;
     V4L2m2mPriv *priv = avctx->priv_data;
     int ret;
 
-    ret = ff_v4l2_m2m_create_context(priv, &s);
+    ret = ff_v4l2_m2m_exp_m2m_create_context(priv, &s);
     if (ret < 0)
         return ret;
 
@@ -202,18 +202,18 @@ static av_cold int v4l2_decode_init(AVCodecContext *avctx)
     capture->av_pix_fmt = avctx->pix_fmt;
 
     s->avctx = avctx;
-    ret = ff_v4l2_m2m_codec_init(priv);
+    ret = ff_v4l2_m2m_exp_m2m_codec_init(priv);
     if (ret) {
         av_log(avctx, AV_LOG_ERROR, "can't configure decoder\n");
         return ret;
     }
 
-    return v4l2_prepare_decoder(s);
+    return v4l2_m2m_exp_prepare_decoder(s);
 }
 
-static av_cold int v4l2_decode_close(AVCodecContext *avctx)
+static av_cold int v4l2_m2m_exp_decode_close(AVCodecContext *avctx)
 {
-    return ff_v4l2_m2m_codec_end(avctx->priv_data);
+    return ff_v4l2_m2m_exp_m2m_codec_end(avctx->priv_data);
 }
 
 #define OFFSET(x) offsetof(V4L2m2mPriv, x)
@@ -243,9 +243,9 @@ static const AVOption options[] = {
         .id             = CODEC , \
         .priv_data_size = sizeof(V4L2m2mPriv), \
         .priv_class     = &v4l2_m2m_ ## NAME ## _dec_class, \
-        .init           = v4l2_decode_init, \
-        .receive_frame  = v4l2_receive_frame, \
-        .close          = v4l2_decode_close, \
+        .init           = v4l2_m2m_exp_decode_init, \
+        .receive_frame  = v4l2_m2m_exp_receive_frame, \
+        .close          = v4l2_m2m_exp_decode_close, \
         .bsfs           = bsf_name, \
         .capabilities   = AV_CODEC_CAP_HARDWARE | AV_CODEC_CAP_DELAY | AV_CODEC_CAP_AVOID_PROBING, \
         .caps_internal  = FF_CODEC_CAP_SETS_PKT_DTS | FF_CODEC_CAP_INIT_CLEANUP, \

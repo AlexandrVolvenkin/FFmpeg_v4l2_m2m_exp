@@ -30,12 +30,12 @@
 #include "libavcodec/avcodec.h"
 #include "libavcodec/internal.h"
 #include "libavutil/pixdesc.h"
-#include "v4l2_context.h"
-#include "v4l2_buffers.h"
-#include "v4l2_m2m.h"
+#include "v4l2_m2m_exp_context.h"
+#include "v4l2_m2m_exp_buffers.h"
+#include "v4l2_m2m_exp_m2m.h"
 
 #define USEC_PER_SEC 1000000
-static AVRational v4l2_timebase = { 1, USEC_PER_SEC };
+static AVRational v4l2_m2m_exp_timebase = { 1, USEC_PER_SEC };
 
 static inline V4L2m2mContext *buf_to_m2mctx(V4L2Buffer *buf)
 {
@@ -49,7 +49,7 @@ static inline AVCodecContext *logger(V4L2Buffer *buf)
     return buf_to_m2mctx(buf)->avctx;
 }
 
-static inline AVRational v4l2_get_timebase(V4L2Buffer *avbuf)
+static inline AVRational v4l2_m2m_exp_get_timebase(V4L2Buffer *avbuf)
 {
     V4L2m2mContext *s = buf_to_m2mctx(avbuf);
 
@@ -58,31 +58,31 @@ static inline AVRational v4l2_get_timebase(V4L2Buffer *avbuf)
     return s->avctx->time_base;
 }
 
-static inline void v4l2_set_pts(V4L2Buffer *out, int64_t pts)
+static inline void v4l2_m2m_exp_set_pts(V4L2Buffer *out, int64_t pts)
 {
-    int64_t v4l2_pts;
+    int64_t v4l2_m2m_exp_pts;
 
     if (pts == AV_NOPTS_VALUE)
         pts = 0;
 
     /* convert pts to v4l2 timebase */
-    v4l2_pts = av_rescale_q(pts, v4l2_get_timebase(out), v4l2_timebase);
-    out->buf.timestamp.tv_usec = v4l2_pts % USEC_PER_SEC;
-    out->buf.timestamp.tv_sec = v4l2_pts / USEC_PER_SEC;
+    v4l2_m2m_exp_pts = av_rescale_q(pts, v4l2_m2m_exp_get_timebase(out), v4l2_m2m_exp_timebase);
+    out->buf.timestamp.tv_usec = v4l2_m2m_exp_pts % USEC_PER_SEC;
+    out->buf.timestamp.tv_sec = v4l2_m2m_exp_pts / USEC_PER_SEC;
 }
 
-static inline int64_t v4l2_get_pts(V4L2Buffer *avbuf)
+static inline int64_t v4l2_m2m_exp_get_pts(V4L2Buffer *avbuf)
 {
-    int64_t v4l2_pts;
+    int64_t v4l2_m2m_exp_pts;
 
     /* convert pts back to encoder timebase */
-    v4l2_pts = (int64_t)avbuf->buf.timestamp.tv_sec * USEC_PER_SEC +
+    v4l2_m2m_exp_pts = (int64_t)avbuf->buf.timestamp.tv_sec * USEC_PER_SEC +
                         avbuf->buf.timestamp.tv_usec;
 
-    return av_rescale_q(v4l2_pts, v4l2_timebase, v4l2_get_timebase(avbuf));
+    return av_rescale_q(v4l2_m2m_exp_pts, v4l2_m2m_exp_timebase, v4l2_m2m_exp_get_timebase(avbuf));
 }
 
-static enum AVColorPrimaries v4l2_get_color_primaries(V4L2Buffer *buf)
+static enum AVColorPrimaries v4l2_m2m_exp_get_color_primaries(V4L2Buffer *buf)
 {
     enum v4l2_ycbcr_encoding ycbcr;
     enum v4l2_colorspace cs;
@@ -116,7 +116,7 @@ static enum AVColorPrimaries v4l2_get_color_primaries(V4L2Buffer *buf)
     return AVCOL_PRI_UNSPECIFIED;
 }
 
-static enum AVColorRange v4l2_get_color_range(V4L2Buffer *buf)
+static enum AVColorRange v4l2_m2m_exp_get_color_range(V4L2Buffer *buf)
 {
     enum v4l2_quantization qt;
 
@@ -134,7 +134,7 @@ static enum AVColorRange v4l2_get_color_range(V4L2Buffer *buf)
      return AVCOL_RANGE_UNSPECIFIED;
 }
 
-static enum AVColorSpace v4l2_get_color_space(V4L2Buffer *buf)
+static enum AVColorSpace v4l2_m2m_exp_get_color_space(V4L2Buffer *buf)
 {
     enum v4l2_ycbcr_encoding ycbcr;
     enum v4l2_colorspace cs;
@@ -166,7 +166,7 @@ static enum AVColorSpace v4l2_get_color_space(V4L2Buffer *buf)
     return AVCOL_SPC_UNSPECIFIED;
 }
 
-static enum AVColorTransferCharacteristic v4l2_get_color_trc(V4L2Buffer *buf)
+static enum AVColorTransferCharacteristic v4l2_m2m_exp_get_color_trc(V4L2Buffer *buf)
 {
     enum v4l2_ycbcr_encoding ycbcr;
     enum v4l2_xfer_func xfer;
@@ -210,7 +210,7 @@ static enum AVColorTransferCharacteristic v4l2_get_color_trc(V4L2Buffer *buf)
     return AVCOL_TRC_UNSPECIFIED;
 }
 
-static void v4l2_free_buffer(void *opaque, uint8_t *unused)
+static void v4l2_m2m_exp_free_buffer(void *opaque, uint8_t *unused)
 {
     V4L2Buffer* avbuf = opaque;
     V4L2m2mContext *s = buf_to_m2mctx(avbuf);
@@ -227,14 +227,14 @@ static void v4l2_free_buffer(void *opaque, uint8_t *unused)
                 avbuf->status = V4L2BUF_AVAILABLE;
             }
             else if (avbuf->context->streamon)
-                ff_v4l2_buffer_enqueue(avbuf);
+                ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
         }
 
         av_buffer_unref(&avbuf->context_ref);
     }
 }
 
-static int v4l2_buf_increase_ref(V4L2Buffer *in)
+static int v4l2_m2m_exp_buf_increase_ref(V4L2Buffer *in)
 {
     V4L2m2mContext *s = buf_to_m2mctx(in);
 
@@ -254,7 +254,7 @@ static int v4l2_buf_increase_ref(V4L2Buffer *in)
     return 0;
 }
 
-static int v4l2_buf_to_bufref(V4L2Buffer *in, int plane, AVBufferRef **buf)
+static int v4l2_m2m_exp_buf_to_bufref(V4L2Buffer *in, int plane, AVBufferRef **buf)
 {
     int ret;
 
@@ -263,18 +263,18 @@ static int v4l2_buf_to_bufref(V4L2Buffer *in, int plane, AVBufferRef **buf)
 
     /* even though most encoders return 0 in data_offset encoding vp8 does require this value */
     *buf = av_buffer_create((char *)in->plane_info[plane].mm_addr + in->planes[plane].data_offset,
-                            in->plane_info[plane].length, v4l2_free_buffer, in, 0);
+                            in->plane_info[plane].length, v4l2_m2m_exp_free_buffer, in, 0);
     if (!*buf)
         return AVERROR(ENOMEM);
 
-    ret = v4l2_buf_increase_ref(in);
+    ret = v4l2_m2m_exp_buf_increase_ref(in);
     if (ret)
         av_buffer_unref(buf);
 
     return ret;
 }
 
-static int v4l2_bufref_to_buf(V4L2Buffer *out, int plane, const uint8_t* data, int size, int offset)
+static int v4l2_m2m_exp_bufref_to_buf(V4L2Buffer *out, int plane, const uint8_t* data, int size, int offset)
 {
     unsigned int bytesused, length;
 
@@ -304,7 +304,7 @@ static int v4l2_buffer_buf_to_swframe(AVFrame *frame, V4L2Buffer *avbuf)
     frame->format = avbuf->context->av_pix_fmt;
 
     for (i = 0; i < avbuf->num_planes; i++) {
-        ret = v4l2_buf_to_bufref(avbuf, i, &frame->buf[i]);
+        ret = v4l2_m2m_exp_buf_to_bufref(avbuf, i, &frame->buf[i]);
         if (ret)
             return ret;
 
@@ -386,7 +386,7 @@ static int v4l2_buffer_swframe_to_buf(const AVFrame *frame, V4L2Buffer *out)
                 h = AV_CEIL_RSHIFT(h, desc->log2_chroma_h);
             }
             size = frame->linesize[i] * h;
-            ret = v4l2_bufref_to_buf(out, 0, frame->data[i], size, offset);
+            ret = v4l2_m2m_exp_bufref_to_buf(out, 0, frame->data[i], size, offset);
             if (ret)
                 return ret;
             offset += size;
@@ -395,7 +395,7 @@ static int v4l2_buffer_swframe_to_buf(const AVFrame *frame, V4L2Buffer *out)
     }
 
     for (i = 0; i < out->num_planes; i++) {
-        ret = v4l2_bufref_to_buf(out, i, frame->buf[i]->data, frame->buf[i]->size, 0);
+        ret = v4l2_m2m_exp_bufref_to_buf(out, i, frame->buf[i]->data, frame->buf[i]->size, 0);
         if (ret)
             return ret;
     }
@@ -409,14 +409,14 @@ static int v4l2_buffer_swframe_to_buf(const AVFrame *frame, V4L2Buffer *out)
  *
  ******************************************************************************/
 
-int ff_v4l2_buffer_avframe_to_buf(const AVFrame *frame, V4L2Buffer *out)
+int ff_v4l2_m2m_exp_buffer_avframe_to_buf(const AVFrame *frame, V4L2Buffer *out)
 {
-    v4l2_set_pts(out, frame->pts);
+    v4l2_m2m_exp_set_pts(out, frame->pts);
 
     return v4l2_buffer_swframe_to_buf(frame, out);
 }
 
-int ff_v4l2_buffer_buf_to_avframe(AVFrame *frame, V4L2Buffer *avbuf)
+int ff_v4l2_m2m_exp_buffer_buf_to_avframe(AVFrame *frame, V4L2Buffer *avbuf)
 {
     int ret;
 
@@ -429,14 +429,14 @@ int ff_v4l2_buffer_buf_to_avframe(AVFrame *frame, V4L2Buffer *avbuf)
 
     /* 2. get frame information */
     frame->key_frame = !!(avbuf->buf.flags & V4L2_BUF_FLAG_KEYFRAME);
-    frame->color_primaries = v4l2_get_color_primaries(avbuf);
-    frame->colorspace = v4l2_get_color_space(avbuf);
-    frame->color_range = v4l2_get_color_range(avbuf);
-    frame->color_trc = v4l2_get_color_trc(avbuf);
-    frame->pts = v4l2_get_pts(avbuf);
+    frame->color_primaries = v4l2_m2m_exp_get_color_primaries(avbuf);
+    frame->colorspace = v4l2_m2m_exp_get_color_space(avbuf);
+    frame->color_range = v4l2_m2m_exp_get_color_range(avbuf);
+    frame->color_trc = v4l2_m2m_exp_get_color_trc(avbuf);
+    frame->pts = v4l2_m2m_exp_get_pts(avbuf);
     frame->pkt_dts = AV_NOPTS_VALUE;
 
-    /* these values are updated also during re-init in v4l2_process_driver_event */
+    /* these values are updated also during re-init in v4l2_m2m_exp_process_driver_event */
     frame->height = avbuf->context->height;
     frame->width = avbuf->context->width;
     frame->sample_aspect_ratio = avbuf->context->sample_aspect_ratio;
@@ -450,12 +450,12 @@ int ff_v4l2_buffer_buf_to_avframe(AVFrame *frame, V4L2Buffer *avbuf)
     return 0;
 }
 
-int ff_v4l2_buffer_buf_to_avpkt(AVPacket *pkt, V4L2Buffer *avbuf)
+int ff_v4l2_m2m_exp_buffer_buf_to_avpkt(AVPacket *pkt, V4L2Buffer *avbuf)
 {
     int ret;
 
     av_packet_unref(pkt);
-    ret = v4l2_buf_to_bufref(avbuf, 0, &pkt->buf);
+    ret = v4l2_m2m_exp_buf_to_bufref(avbuf, 0, &pkt->buf);
     if (ret)
         return ret;
 
@@ -470,20 +470,20 @@ int ff_v4l2_buffer_buf_to_avpkt(AVPacket *pkt, V4L2Buffer *avbuf)
         pkt->flags |= AV_PKT_FLAG_CORRUPT;
     }
 
-    pkt->dts = pkt->pts = v4l2_get_pts(avbuf);
+    pkt->dts = pkt->pts = v4l2_m2m_exp_get_pts(avbuf);
 
     return 0;
 }
 
-int ff_v4l2_buffer_avpkt_to_buf(const AVPacket *pkt, V4L2Buffer *out)
+int ff_v4l2_m2m_exp_buffer_avpkt_to_buf(const AVPacket *pkt, V4L2Buffer *out)
 {
     int ret;
 
-    ret = v4l2_bufref_to_buf(out, 0, pkt->data, pkt->size, 0);
+    ret = v4l2_m2m_exp_bufref_to_buf(out, 0, pkt->data, pkt->size, 0);
     if (ret)
         return ret;
 
-    v4l2_set_pts(out, pkt->pts);
+    v4l2_m2m_exp_set_pts(out, pkt->pts);
 
     if (pkt->flags & AV_PKT_FLAG_KEY)
         out->flags = V4L2_BUF_FLAG_KEYFRAME;
@@ -491,7 +491,7 @@ int ff_v4l2_buffer_avpkt_to_buf(const AVPacket *pkt, V4L2Buffer *out)
     return 0;
 }
 
-int ff_v4l2_buffer_initialize(V4L2Buffer* avbuf, int index)
+int ff_v4l2_m2m_exp_buffer_initialize(V4L2Buffer* avbuf, int index)
 {
     V4L2Context *ctx = avbuf->context;
     int ret, i;
@@ -555,10 +555,10 @@ int ff_v4l2_buffer_initialize(V4L2Buffer* avbuf, int index)
         avbuf->buf.length    = avbuf->planes[0].length;
     }
 
-    return ff_v4l2_buffer_enqueue(avbuf);
+    return ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
 }
 
-int ff_v4l2_buffer_enqueue(V4L2Buffer* avbuf)
+int ff_v4l2_m2m_exp_buffer_enqueue(V4L2Buffer* avbuf)
 {
     int ret;
 

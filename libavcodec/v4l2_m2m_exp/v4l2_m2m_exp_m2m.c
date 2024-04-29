@@ -32,11 +32,11 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/pixfmt.h"
-#include "v4l2_context.h"
-#include "v4l2_fmt.h"
-#include "v4l2_m2m.h"
+#include "v4l2_m2m_exp_context.h"
+#include "v4l2_m2m_exp_fmt.h"
+#include "v4l2_m2m_exp_m2m.h"
 
-static inline int v4l2_splane_video(struct v4l2_capability *cap)
+static inline int v4l2_m2m_exp_splane_video(struct v4l2_capability *cap)
 {
     if (cap->capabilities & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_OUTPUT) &&
         cap->capabilities & V4L2_CAP_STREAMING)
@@ -48,7 +48,7 @@ static inline int v4l2_splane_video(struct v4l2_capability *cap)
     return 0;
 }
 
-static inline int v4l2_mplane_video(struct v4l2_capability *cap)
+static inline int v4l2_m2m_exp_mplane_video(struct v4l2_capability *cap)
 {
     if (cap->capabilities & (V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE) &&
         cap->capabilities & V4L2_CAP_STREAMING)
@@ -60,7 +60,7 @@ static inline int v4l2_mplane_video(struct v4l2_capability *cap)
     return 0;
 }
 
-static int v4l2_prepare_contexts(V4L2m2mContext *s, int probe)
+static int v4l2_m2m_exp_prepare_contexts(V4L2m2mContext *s, int probe)
 {
     struct v4l2_capability cap;
     void *log_ctx = s->avctx;
@@ -79,16 +79,16 @@ static int v4l2_prepare_contexts(V4L2m2mContext *s, int probe)
 
     av_log(log_ctx, probe ? AV_LOG_DEBUG : AV_LOG_INFO,
                      "driver '%s' on card '%s' in %s mode\n", cap.driver, cap.card,
-                     v4l2_mplane_video(&cap) ? "mplane" :
-                     v4l2_splane_video(&cap) ? "splane" : "unknown");
+                     v4l2_m2m_exp_mplane_video(&cap) ? "mplane" :
+                     v4l2_m2m_exp_splane_video(&cap) ? "splane" : "unknown");
 
-    if (v4l2_mplane_video(&cap)) {
+    if (v4l2_m2m_exp_mplane_video(&cap)) {
         s->capture.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         s->output.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         return 0;
     }
 
-    if (v4l2_splane_video(&cap)) {
+    if (v4l2_m2m_exp_splane_video(&cap)) {
         s->capture.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         s->output.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
         return 0;
@@ -97,7 +97,7 @@ static int v4l2_prepare_contexts(V4L2m2mContext *s, int probe)
     return AVERROR(EINVAL);
 }
 
-static int v4l2_probe_driver(V4L2m2mContext *s)
+static int v4l2_m2m_exp_probe_driver(V4L2m2mContext *s)
 {
     void *log_ctx = s->avctx;
     int ret;
@@ -106,17 +106,17 @@ static int v4l2_probe_driver(V4L2m2mContext *s)
     if (s->fd < 0)
         return AVERROR(errno);
 
-    ret = v4l2_prepare_contexts(s, 1);
+    ret = v4l2_m2m_exp_prepare_contexts(s, 1);
     if (ret < 0)
         goto done;
 
-    ret = ff_v4l2_context_get_format(&s->output, 1);
+    ret = ff_v4l2_m2m_exp_context_get_format(&s->output, 1);
     if (ret) {
         av_log(log_ctx, AV_LOG_DEBUG, "v4l2 output format not supported\n");
         goto done;
     }
 
-    ret = ff_v4l2_context_get_format(&s->capture, 1);
+    ret = ff_v4l2_m2m_exp_context_get_format(&s->capture, 1);
     if (ret) {
         av_log(log_ctx, AV_LOG_DEBUG, "v4l2 capture format not supported\n");
         goto done;
@@ -133,7 +133,7 @@ done:
     return ret;
 }
 
-static int v4l2_configure_contexts(V4L2m2mContext *s)
+static int v4l2_m2m_exp_configure_contexts(V4L2m2mContext *s)
 {
     void *log_ctx = s->avctx;
     int ret;
@@ -143,7 +143,7 @@ static int v4l2_configure_contexts(V4L2m2mContext *s)
     if (s->fd < 0)
         return AVERROR(errno);
 
-    ret = v4l2_prepare_contexts(s, 0);
+    ret = v4l2_m2m_exp_prepare_contexts(s, 0);
     if (ret < 0)
         goto error;
 
@@ -157,19 +157,19 @@ static int v4l2_configure_contexts(V4L2m2mContext *s)
                                                cfmt.fmt.pix_mp.pixelformat :
                                                cfmt.fmt.pix.pixelformat));
 
-    ret = ff_v4l2_context_set_format(&s->output);
+    ret = ff_v4l2_m2m_exp_context_set_format(&s->output);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "can't set v4l2 output format\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_set_format(&s->capture);
+    ret = ff_v4l2_m2m_exp_context_set_format(&s->capture);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "can't to set v4l2 capture format\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_init(&s->output);
+    ret = ff_v4l2_m2m_exp_context_init(&s->output);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "no v4l2 output context's buffers\n");
         goto error;
@@ -177,7 +177,7 @@ static int v4l2_configure_contexts(V4L2m2mContext *s)
 
     /* decoder's buffers need to be updated at a later stage */
     if (s->avctx && !av_codec_is_decoder(s->avctx->codec)) {
-        ret = ff_v4l2_context_init(&s->capture);
+        ret = ff_v4l2_m2m_exp_context_init(&s->capture);
         if (ret) {
             av_log(log_ctx, AV_LOG_ERROR, "no v4l2 capture context's buffers\n");
             goto error;
@@ -202,7 +202,7 @@ error:
  *                  V4L2 M2M Interface
  *
  ******************************************************************************/
-int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *s)
+int ff_v4l2_m2m_exp_m2m_codec_reinit(V4L2m2mContext *s)
 {
     void *log_ctx = s->avctx;
     int ret;
@@ -210,7 +210,7 @@ int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *s)
     av_log(log_ctx, AV_LOG_DEBUG, "reinit context\n");
 
     /* 1. streamoff */
-    ret = ff_v4l2_context_set_status(&s->capture, VIDIOC_STREAMOFF);
+    ret = ff_v4l2_m2m_exp_context_set_status(&s->capture, VIDIOC_STREAMOFF);
     if (ret)
         av_log(log_ctx, AV_LOG_ERROR, "capture VIDIOC_STREAMOFF\n");
 
@@ -222,17 +222,17 @@ int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *s)
     if (atomic_load(&s->refcount))
         while(sem_wait(&s->refsync) == -1 && errno == EINTR);
 
-    ff_v4l2_context_release(&s->capture);
+    ff_v4l2_m2m_exp_context_release(&s->capture);
 
     /* 3. get the new capture format */
-    ret = ff_v4l2_context_get_format(&s->capture, 0);
+    ret = ff_v4l2_m2m_exp_context_get_format(&s->capture, 0);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "query the new capture format\n");
         return ret;
     }
 
     /* 4. set the capture format */
-    ret = ff_v4l2_context_set_format(&s->capture);
+    ret = ff_v4l2_m2m_exp_context_set_format(&s->capture);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "setting capture format\n");
         return ret;
@@ -245,7 +245,7 @@ int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *s)
     return 0;
 }
 
-int ff_v4l2_m2m_codec_full_reinit(V4L2m2mContext *s)
+int ff_v4l2_m2m_exp_m2m_codec_full_reinit(V4L2m2mContext *s)
 {
     void *log_ctx = s->avctx;
     int ret;
@@ -256,51 +256,51 @@ int ff_v4l2_m2m_codec_full_reinit(V4L2m2mContext *s)
     if (atomic_load(&s->refcount))
         while(sem_wait(&s->refsync) == -1 && errno == EINTR);
 
-    ret = ff_v4l2_context_set_status(&s->output, VIDIOC_STREAMOFF);
+    ret = ff_v4l2_m2m_exp_context_set_status(&s->output, VIDIOC_STREAMOFF);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "output VIDIOC_STREAMOFF\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_set_status(&s->capture, VIDIOC_STREAMOFF);
+    ret = ff_v4l2_m2m_exp_context_set_status(&s->capture, VIDIOC_STREAMOFF);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "capture VIDIOC_STREAMOFF\n");
         goto error;
     }
 
     /* release and unmmap the buffers */
-    ff_v4l2_context_release(&s->output);
-    ff_v4l2_context_release(&s->capture);
+    ff_v4l2_m2m_exp_context_release(&s->output);
+    ff_v4l2_m2m_exp_context_release(&s->capture);
 
     /* start again now that we know the stream dimensions */
     s->draining = 0;
     s->reinit = 0;
 
-    ret = ff_v4l2_context_get_format(&s->output, 0);
+    ret = ff_v4l2_m2m_exp_context_get_format(&s->output, 0);
     if (ret) {
         av_log(log_ctx, AV_LOG_DEBUG, "v4l2 output format not supported\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_get_format(&s->capture, 0);
+    ret = ff_v4l2_m2m_exp_context_get_format(&s->capture, 0);
     if (ret) {
         av_log(log_ctx, AV_LOG_DEBUG, "v4l2 capture format not supported\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_set_format(&s->output);
+    ret = ff_v4l2_m2m_exp_context_set_format(&s->output);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "can't set v4l2 output format\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_set_format(&s->capture);
+    ret = ff_v4l2_m2m_exp_context_set_format(&s->capture);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "can't to set v4l2 capture format\n");
         goto error;
     }
 
-    ret = ff_v4l2_context_init(&s->output);
+    ret = ff_v4l2_m2m_exp_context_init(&s->output);
     if (ret) {
         av_log(log_ctx, AV_LOG_ERROR, "no v4l2 output context's buffers\n");
         goto error;
@@ -308,7 +308,7 @@ int ff_v4l2_m2m_codec_full_reinit(V4L2m2mContext *s)
 
     /* decoder's buffers need to be updated at a later stage */
     if (s->avctx && !av_codec_is_decoder(s->avctx->codec)) {
-        ret = ff_v4l2_context_init(&s->capture);
+        ret = ff_v4l2_m2m_exp_context_init(&s->capture);
         if (ret) {
             av_log(log_ctx, AV_LOG_ERROR, "no v4l2 capture context's buffers\n");
             goto error;
@@ -321,11 +321,11 @@ error:
     return ret;
 }
 
-static void v4l2_m2m_destroy_context(void *opaque, uint8_t *context)
+static void v4l2_m2m_exp_m2m_destroy_context(void *opaque, uint8_t *context)
 {
     V4L2m2mContext *s = (V4L2m2mContext*)context;
 
-    ff_v4l2_context_release(&s->capture);
+    ff_v4l2_m2m_exp_context_release(&s->capture);
     sem_destroy(&s->refsync);
 
     close(s->fd);
@@ -336,7 +336,7 @@ static void v4l2_m2m_destroy_context(void *opaque, uint8_t *context)
     av_free(s);
 }
 
-int ff_v4l2_m2m_codec_end(V4L2m2mPriv *priv)
+int ff_v4l2_m2m_exp_m2m_codec_end(V4L2m2mPriv *priv)
 {
     V4L2m2mContext *s = priv->context;
     int ret;
@@ -345,16 +345,16 @@ int ff_v4l2_m2m_codec_end(V4L2m2mPriv *priv)
         return 0;
 
     if (s->fd >= 0) {
-        ret = ff_v4l2_context_set_status(&s->output, VIDIOC_STREAMOFF);
+        ret = ff_v4l2_m2m_exp_context_set_status(&s->output, VIDIOC_STREAMOFF);
         if (ret)
             av_log(s->avctx, AV_LOG_ERROR, "VIDIOC_STREAMOFF %s\n", s->output.name);
 
-        ret = ff_v4l2_context_set_status(&s->capture, VIDIOC_STREAMOFF);
+        ret = ff_v4l2_m2m_exp_context_set_status(&s->capture, VIDIOC_STREAMOFF);
         if (ret)
             av_log(s->avctx, AV_LOG_ERROR, "VIDIOC_STREAMOFF %s\n", s->capture.name);
     }
 
-    ff_v4l2_context_release(&s->output);
+    ff_v4l2_m2m_exp_context_release(&s->output);
 
     s->self_ref = NULL;
     av_buffer_unref(&priv->context_ref);
@@ -362,7 +362,7 @@ int ff_v4l2_m2m_codec_end(V4L2m2mPriv *priv)
     return 0;
 }
 
-int ff_v4l2_m2m_codec_init(V4L2m2mPriv *priv)
+int ff_v4l2_m2m_exp_m2m_codec_init(V4L2m2mPriv *priv)
 {
     int ret = AVERROR(EINVAL);
     struct dirent *entry;
@@ -381,7 +381,7 @@ int ff_v4l2_m2m_codec_init(V4L2m2mPriv *priv)
 
         snprintf(s->devname, sizeof(s->devname), "/dev/%s", entry->d_name);
         av_log(s->avctx, AV_LOG_DEBUG, "probing device %s\n", s->devname);
-        ret = v4l2_probe_driver(s);
+        ret = v4l2_m2m_exp_probe_driver(s);
         if (!ret)
             break;
     }
@@ -397,17 +397,17 @@ int ff_v4l2_m2m_codec_init(V4L2m2mPriv *priv)
 
     av_log(s->avctx, AV_LOG_INFO, "Using device %s\n", s->devname);
 
-    return v4l2_configure_contexts(s);
+    return v4l2_m2m_exp_configure_contexts(s);
 }
 
-int ff_v4l2_m2m_create_context(V4L2m2mPriv *priv, V4L2m2mContext **s)
+int ff_v4l2_m2m_exp_m2m_create_context(V4L2m2mPriv *priv, V4L2m2mContext **s)
 {
     *s = av_mallocz(sizeof(V4L2m2mContext));
     if (!*s)
         return AVERROR(ENOMEM);
 
     priv->context_ref = av_buffer_create((uint8_t *) *s, sizeof(V4L2m2mContext),
-                                         &v4l2_m2m_destroy_context, NULL, 0);
+                                         &v4l2_m2m_exp_m2m_destroy_context, NULL, 0);
     if (!priv->context_ref) {
         av_freep(s);
         return AVERROR(ENOMEM);

@@ -29,12 +29,12 @@
 #include <poll.h>
 #include "libavcodec/avcodec.h"
 #include "libavcodec/internal.h"
-#include "v4l2_buffers.h"
-#include "v4l2_fmt.h"
-#include "v4l2_m2m.h"
+#include "v4l2_m2m_exp_buffers.h"
+#include "v4l2_m2m_exp_fmt.h"
+#include "v4l2_m2m_exp_m2m.h"
 
 struct v4l2_format_update {
-    uint32_t v4l2_fmt;
+    uint32_t v4l2_m2m_exp_fmt;
     int update_v4l2;
 
     enum AVPixelFormat av_fmt;
@@ -53,17 +53,17 @@ static inline AVCodecContext *logger(V4L2Context *ctx)
     return ctx_to_m2mctx(ctx)->avctx;
 }
 
-static inline unsigned int v4l2_get_width(struct v4l2_format *fmt)
+static inline unsigned int v4l2_m2m_exp_get_width(struct v4l2_format *fmt)
 {
     return V4L2_TYPE_IS_MULTIPLANAR(fmt->type) ? fmt->fmt.pix_mp.width : fmt->fmt.pix.width;
 }
 
-static inline unsigned int v4l2_get_height(struct v4l2_format *fmt)
+static inline unsigned int v4l2_m2m_exp_get_height(struct v4l2_format *fmt)
 {
     return V4L2_TYPE_IS_MULTIPLANAR(fmt->type) ? fmt->fmt.pix_mp.height : fmt->fmt.pix.height;
 }
 
-static AVRational v4l2_get_sar(V4L2Context *ctx)
+static AVRational v4l2_m2m_exp_get_sar(V4L2Context *ctx)
 {
     struct AVRational sar = { 0, 1 };
     struct v4l2_cropcap cropcap;
@@ -81,7 +81,7 @@ static AVRational v4l2_get_sar(V4L2Context *ctx)
     return sar;
 }
 
-static inline unsigned int v4l2_resolution_changed(V4L2Context *ctx, struct v4l2_format *fmt2)
+static inline unsigned int v4l2_m2m_exp_resolution_changed(V4L2Context *ctx, struct v4l2_format *fmt2)
 {
     struct v4l2_format *fmt1 = &ctx->format;
     int ret =  V4L2_TYPE_IS_MULTIPLANAR(ctx->type) ?
@@ -94,13 +94,13 @@ static inline unsigned int v4l2_resolution_changed(V4L2Context *ctx, struct v4l2
     if (ret)
         av_log(logger(ctx), AV_LOG_DEBUG, "%s changed (%dx%d) -> (%dx%d)\n",
             ctx->name,
-            v4l2_get_width(fmt1), v4l2_get_height(fmt1),
-            v4l2_get_width(fmt2), v4l2_get_height(fmt2));
+            v4l2_m2m_exp_get_width(fmt1), v4l2_m2m_exp_get_height(fmt1),
+            v4l2_m2m_exp_get_width(fmt2), v4l2_m2m_exp_get_height(fmt2));
 
     return ret;
 }
 
-static inline int v4l2_type_supported(V4L2Context *ctx)
+static inline int v4l2_m2m_exp_type_supported(V4L2Context *ctx)
 {
     return ctx->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE ||
         ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ||
@@ -108,7 +108,7 @@ static inline int v4l2_type_supported(V4L2Context *ctx)
         ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT;
 }
 
-static inline int v4l2_get_framesize_compressed(V4L2Context* ctx, int width, int height)
+static inline int v4l2_m2m_exp_get_framesize_compressed(V4L2Context* ctx, int width, int height)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);
     const int SZ_4K = 0x1000;
@@ -122,7 +122,7 @@ static inline int v4l2_get_framesize_compressed(V4L2Context* ctx, int width, int
     return FFALIGN(size, SZ_4K);
 }
 
-static inline void v4l2_save_to_context(V4L2Context* ctx, struct v4l2_format_update *fmt)
+static inline void v4l2_m2m_exp_save_to_context(V4L2Context* ctx, struct v4l2_format_update *fmt)
 {
     ctx->format.type = ctx->type;
 
@@ -134,21 +134,21 @@ static inline void v4l2_save_to_context(V4L2Context* ctx, struct v4l2_format_upd
         ctx->format.fmt.pix_mp.height = ctx->height;
         ctx->format.fmt.pix_mp.width = ctx->width;
         if (fmt->update_v4l2) {
-            ctx->format.fmt.pix_mp.pixelformat = fmt->v4l2_fmt;
+            ctx->format.fmt.pix_mp.pixelformat = fmt->v4l2_m2m_exp_fmt;
 
             /* s5p-mfc requires the user to specify a buffer size */
             ctx->format.fmt.pix_mp.plane_fmt[0].sizeimage =
-                v4l2_get_framesize_compressed(ctx, ctx->width, ctx->height);
+                v4l2_m2m_exp_get_framesize_compressed(ctx, ctx->width, ctx->height);
         }
     } else {
         ctx->format.fmt.pix.height = ctx->height;
         ctx->format.fmt.pix.width = ctx->width;
         if (fmt->update_v4l2) {
-            ctx->format.fmt.pix.pixelformat = fmt->v4l2_fmt;
+            ctx->format.fmt.pix.pixelformat = fmt->v4l2_m2m_exp_fmt;
 
             /* s5p-mfc requires the user to specify a buffer size */
             ctx->format.fmt.pix.sizeimage =
-                v4l2_get_framesize_compressed(ctx, ctx->width, ctx->height);
+                v4l2_m2m_exp_get_framesize_compressed(ctx, ctx->width, ctx->height);
         }
     }
 }
@@ -158,7 +158,7 @@ static inline void v4l2_save_to_context(V4L2Context* ctx, struct v4l2_format_upd
  * returns 1 if reinit was successful, negative if it failed
  * returns 0 if reinit was not executed
  */
-static int v4l2_handle_event(V4L2Context *ctx)
+static int v4l2_m2m_exp_handle_event(V4L2Context *ctx)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);
     struct v4l2_format cap_fmt = s->capture.format;
@@ -192,27 +192,27 @@ static int v4l2_handle_event(V4L2Context *ctx)
         return 0;
     }
 
-    full_reinit = v4l2_resolution_changed(&s->output, &out_fmt);
+    full_reinit = v4l2_m2m_exp_resolution_changed(&s->output, &out_fmt);
     if (full_reinit) {
-        s->output.height = v4l2_get_height(&out_fmt);
-        s->output.width = v4l2_get_width(&out_fmt);
-        s->output.sample_aspect_ratio = v4l2_get_sar(&s->output);
+        s->output.height = v4l2_m2m_exp_get_height(&out_fmt);
+        s->output.width = v4l2_m2m_exp_get_width(&out_fmt);
+        s->output.sample_aspect_ratio = v4l2_m2m_exp_get_sar(&s->output);
     }
 
-    reinit = v4l2_resolution_changed(&s->capture, &cap_fmt);
+    reinit = v4l2_m2m_exp_resolution_changed(&s->capture, &cap_fmt);
     if (reinit) {
-        s->capture.height = v4l2_get_height(&cap_fmt);
-        s->capture.width = v4l2_get_width(&cap_fmt);
-        s->capture.sample_aspect_ratio = v4l2_get_sar(&s->capture);
+        s->capture.height = v4l2_m2m_exp_get_height(&cap_fmt);
+        s->capture.width = v4l2_m2m_exp_get_width(&cap_fmt);
+        s->capture.sample_aspect_ratio = v4l2_m2m_exp_get_sar(&s->capture);
     }
 
     if (full_reinit || reinit)
         s->reinit = 1;
 
     if (full_reinit) {
-        ret = ff_v4l2_m2m_codec_full_reinit(s);
+        ret = ff_v4l2_m2m_exp_m2m_codec_full_reinit(s);
         if (ret) {
-            av_log(logger(ctx), AV_LOG_ERROR, "v4l2_m2m_codec_full_reinit\n");
+            av_log(logger(ctx), AV_LOG_ERROR, "v4l2_m2m_exp_m2m_codec_full_reinit\n");
             return AVERROR(EINVAL);
         }
         goto reinit_run;
@@ -224,9 +224,9 @@ static int v4l2_handle_event(V4L2Context *ctx)
         if (ret < 0)
             av_log(logger(ctx), AV_LOG_WARNING, "update avcodec height and width\n");
 
-        ret = ff_v4l2_m2m_codec_reinit(s);
+        ret = ff_v4l2_m2m_exp_m2m_codec_reinit(s);
         if (ret) {
-            av_log(logger(ctx), AV_LOG_ERROR, "v4l2_m2m_codec_reinit\n");
+            av_log(logger(ctx), AV_LOG_ERROR, "v4l2_m2m_exp_m2m_codec_reinit\n");
             return AVERROR(EINVAL);
         }
         goto reinit_run;
@@ -240,7 +240,7 @@ reinit_run:
     return 1;
 }
 
-static int v4l2_stop_decode(V4L2Context *ctx)
+static int v4l2_m2m_exp_stop_decode(V4L2Context *ctx)
 {
     struct v4l2_decoder_cmd cmd = {
         .cmd = V4L2_DEC_CMD_STOP,
@@ -252,7 +252,7 @@ static int v4l2_stop_decode(V4L2Context *ctx)
     if (ret) {
         /* DECODER_CMD is optional */
         if (errno == ENOTTY)
-            return ff_v4l2_context_set_status(ctx, VIDIOC_STREAMOFF);
+            return ff_v4l2_m2m_exp_context_set_status(ctx, VIDIOC_STREAMOFF);
         else
             return AVERROR(errno);
     }
@@ -260,7 +260,7 @@ static int v4l2_stop_decode(V4L2Context *ctx)
     return 0;
 }
 
-static int v4l2_stop_encode(V4L2Context *ctx)
+static int v4l2_m2m_exp_stop_encode(V4L2Context *ctx)
 {
     struct v4l2_encoder_cmd cmd = {
         .cmd = V4L2_ENC_CMD_STOP,
@@ -272,7 +272,7 @@ static int v4l2_stop_encode(V4L2Context *ctx)
     if (ret) {
         /* ENCODER_CMD is optional */
         if (errno == ENOTTY)
-            return ff_v4l2_context_set_status(ctx, VIDIOC_STREAMOFF);
+            return ff_v4l2_m2m_exp_context_set_status(ctx, VIDIOC_STREAMOFF);
         else
             return AVERROR(errno);
     }
@@ -280,7 +280,7 @@ static int v4l2_stop_encode(V4L2Context *ctx)
     return 0;
 }
 
-static V4L2Buffer* v4l2_dequeue_v4l2buf(V4L2Context *ctx, int timeout)
+static V4L2Buffer* v4l2_m2m_exp_dequeue_v4l2buf(V4L2Context *ctx, int timeout)
 {
     struct v4l2_plane planes[VIDEO_MAX_PLANES];
     struct v4l2_buffer buf = { 0 };
@@ -355,7 +355,7 @@ start:
 
     /* 1. handle resolution changes */
     if (pfd.revents & POLLPRI) {
-        ret = v4l2_handle_event(ctx);
+        ret = v4l2_m2m_exp_handle_event(ctx);
         if (ret < 0) {
             /* if re-init failed, abort */
             ctx->done = 1;
@@ -431,7 +431,7 @@ dequeue:
     return NULL;
 }
 
-static V4L2Buffer* v4l2_getfree_v4l2buf(V4L2Context *ctx)
+static V4L2Buffer* v4l2_m2m_exp_getfree_v4l2buf(V4L2Context *ctx)
 {
     int timeout = 0; /* return when no more buffers to dequeue */
     int i;
@@ -439,7 +439,7 @@ static V4L2Buffer* v4l2_getfree_v4l2buf(V4L2Context *ctx)
     /* get back as many output buffers as possible */
     if (V4L2_TYPE_IS_OUTPUT(ctx->type)) {
           do {
-          } while (v4l2_dequeue_v4l2buf(ctx, timeout));
+          } while (v4l2_m2m_exp_dequeue_v4l2buf(ctx, timeout));
     }
 
     for (i = 0; i < ctx->num_buffers; i++) {
@@ -450,7 +450,7 @@ static V4L2Buffer* v4l2_getfree_v4l2buf(V4L2Context *ctx)
     return NULL;
 }
 
-static int v4l2_release_buffers(V4L2Context* ctx)
+static int v4l2_m2m_exp_release_buffers(V4L2Context* ctx)
 {
     struct v4l2_requestbuffers req = {
         .memory = V4L2_MEMORY_MMAP,
@@ -473,20 +473,20 @@ static int v4l2_release_buffers(V4L2Context* ctx)
     return ioctl(ctx_to_m2mctx(ctx)->fd, VIDIOC_REQBUFS, &req);
 }
 
-static inline int v4l2_try_raw_format(V4L2Context* ctx, enum AVPixelFormat pixfmt)
+static inline int v4l2_m2m_exp_try_raw_format(V4L2Context* ctx, enum AVPixelFormat pixfmt)
 {
     struct v4l2_format *fmt = &ctx->format;
-    uint32_t v4l2_fmt;
+    uint32_t v4l2_m2m_exp_fmt;
     int ret;
 
-    v4l2_fmt = ff_v4l2_format_avfmt_to_v4l2(pixfmt);
-    if (!v4l2_fmt)
+    v4l2_m2m_exp_fmt = ff_v4l2_m2m_exp_format_avfmt_to_v4l2(pixfmt);
+    if (!v4l2_m2m_exp_fmt)
         return AVERROR(EINVAL);
 
     if (V4L2_TYPE_IS_MULTIPLANAR(ctx->type))
-        fmt->fmt.pix_mp.pixelformat = v4l2_fmt;
+        fmt->fmt.pix_mp.pixelformat = v4l2_m2m_exp_fmt;
     else
-        fmt->fmt.pix.pixelformat = v4l2_fmt;
+        fmt->fmt.pix.pixelformat = v4l2_m2m_exp_fmt;
 
     fmt->type = ctx->type;
 
@@ -497,7 +497,7 @@ static inline int v4l2_try_raw_format(V4L2Context* ctx, enum AVPixelFormat pixfm
     return 0;
 }
 
-static int v4l2_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
+static int v4l2_m2m_exp_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
 {
     enum AVPixelFormat pixfmt = ctx->av_pix_fmt;
     struct v4l2_fmtdesc fdesc;
@@ -507,7 +507,7 @@ static int v4l2_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
     fdesc.type = ctx->type;
 
     if (pixfmt != AV_PIX_FMT_NONE) {
-        ret = v4l2_try_raw_format(ctx, pixfmt);
+        ret = v4l2_m2m_exp_try_raw_format(ctx, pixfmt);
         if (!ret)
             return 0;
     }
@@ -517,8 +517,8 @@ static int v4l2_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
         if (ret)
             return AVERROR(EINVAL);
 
-        pixfmt = ff_v4l2_format_v4l2_to_avfmt(fdesc.pixelformat, AV_CODEC_ID_RAWVIDEO);
-        ret = v4l2_try_raw_format(ctx, pixfmt);
+        pixfmt = ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(fdesc.pixelformat, AV_CODEC_ID_RAWVIDEO);
+        ret = v4l2_m2m_exp_try_raw_format(ctx, pixfmt);
         if (ret){
             fdesc.index++;
             continue;
@@ -532,15 +532,15 @@ static int v4l2_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
     return AVERROR(EINVAL);
 }
 
-static int v4l2_get_coded_format(V4L2Context* ctx, uint32_t *p)
+static int v4l2_m2m_exp_get_coded_format(V4L2Context* ctx, uint32_t *p)
 {
     struct v4l2_fmtdesc fdesc;
-    uint32_t v4l2_fmt;
+    uint32_t v4l2_m2m_exp_fmt;
     int ret;
 
     /* translate to a valid v4l2 format */
-    v4l2_fmt = ff_v4l2_format_avcodec_to_v4l2(ctx->av_codec_id);
-    if (!v4l2_fmt)
+    v4l2_m2m_exp_fmt = ff_v4l2_m2m_exp_format_avcodec_to_v4l2(ctx->av_codec_id);
+    if (!v4l2_m2m_exp_fmt)
         return AVERROR(EINVAL);
 
     /* check if the driver supports this format */
@@ -552,13 +552,13 @@ static int v4l2_get_coded_format(V4L2Context* ctx, uint32_t *p)
         if (ret)
             return AVERROR(EINVAL);
 
-        if (fdesc.pixelformat == v4l2_fmt)
+        if (fdesc.pixelformat == v4l2_m2m_exp_fmt)
             break;
 
         fdesc.index++;
     }
 
-    *p = v4l2_fmt;
+    *p = v4l2_m2m_exp_fmt;
 
     return 0;
 }
@@ -569,7 +569,7 @@ static int v4l2_get_coded_format(V4L2Context* ctx, uint32_t *p)
   *
   *****************************************************************************/
 
-int ff_v4l2_context_set_status(V4L2Context* ctx, uint32_t cmd)
+int ff_v4l2_m2m_exp_context_set_status(V4L2Context* ctx, uint32_t cmd)
 {
     int type = ctx->type;
     int ret;
@@ -583,57 +583,57 @@ int ff_v4l2_context_set_status(V4L2Context* ctx, uint32_t cmd)
     return 0;
 }
 
-int ff_v4l2_context_enqueue_frame(V4L2Context* ctx, const AVFrame* frame)
+int ff_v4l2_m2m_exp_context_enqueue_frame(V4L2Context* ctx, const AVFrame* frame)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);
     V4L2Buffer* avbuf;
     int ret;
 
     if (!frame) {
-        ret = v4l2_stop_encode(ctx);
+        ret = v4l2_m2m_exp_stop_encode(ctx);
         if (ret)
             av_log(logger(ctx), AV_LOG_ERROR, "%s stop_encode\n", ctx->name);
         s->draining= 1;
         return 0;
     }
 
-    avbuf = v4l2_getfree_v4l2buf(ctx);
+    avbuf = v4l2_m2m_exp_getfree_v4l2buf(ctx);
     if (!avbuf)
         return AVERROR(EAGAIN);
 
-    ret = ff_v4l2_buffer_avframe_to_buf(frame, avbuf);
+    ret = ff_v4l2_m2m_exp_buffer_avframe_to_buf(frame, avbuf);
     if (ret)
         return ret;
 
-    return ff_v4l2_buffer_enqueue(avbuf);
+    return ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
 }
 
-int ff_v4l2_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt)
+int ff_v4l2_m2m_exp_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);
     V4L2Buffer* avbuf;
     int ret;
 
     if (!pkt->size) {
-        ret = v4l2_stop_decode(ctx);
+        ret = v4l2_m2m_exp_stop_decode(ctx);
         if (ret)
             av_log(logger(ctx), AV_LOG_ERROR, "%s stop_decode\n", ctx->name);
         s->draining = 1;
         return 0;
     }
 
-    avbuf = v4l2_getfree_v4l2buf(ctx);
+    avbuf = v4l2_m2m_exp_getfree_v4l2buf(ctx);
     if (!avbuf)
         return AVERROR(EAGAIN);
 
-    ret = ff_v4l2_buffer_avpkt_to_buf(pkt, avbuf);
+    ret = ff_v4l2_m2m_exp_buffer_avpkt_to_buf(pkt, avbuf);
     if (ret)
         return ret;
 
-    return ff_v4l2_buffer_enqueue(avbuf);
+    return ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
 }
 
-int ff_v4l2_context_dequeue_frame(V4L2Context* ctx, AVFrame* frame, int timeout)
+int ff_v4l2_m2m_exp_context_dequeue_frame(V4L2Context* ctx, AVFrame* frame, int timeout)
 {
     V4L2Buffer *avbuf;
 
@@ -642,7 +642,7 @@ int ff_v4l2_context_dequeue_frame(V4L2Context* ctx, AVFrame* frame, int timeout)
      *  1. decoded frame available
      *  2. an input buffer is ready to be dequeued
      */
-    avbuf = v4l2_dequeue_v4l2buf(ctx, timeout);
+    avbuf = v4l2_m2m_exp_dequeue_v4l2buf(ctx, timeout);
     if (!avbuf) {
         if (ctx->done)
             return AVERROR_EOF;
@@ -650,10 +650,10 @@ int ff_v4l2_context_dequeue_frame(V4L2Context* ctx, AVFrame* frame, int timeout)
         return AVERROR(EAGAIN);
     }
 
-    return ff_v4l2_buffer_buf_to_avframe(frame, avbuf);
+    return ff_v4l2_m2m_exp_buffer_buf_to_avframe(frame, avbuf);
 }
 
-int ff_v4l2_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt)
+int ff_v4l2_m2m_exp_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt)
 {
     V4L2Buffer *avbuf;
 
@@ -662,7 +662,7 @@ int ff_v4l2_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt)
      *  1. encoded packet available
      *  2. an input buffer ready to be dequeued
      */
-    avbuf = v4l2_dequeue_v4l2buf(ctx, -1);
+    avbuf = v4l2_m2m_exp_dequeue_v4l2buf(ctx, -1);
     if (!avbuf) {
         if (ctx->done)
             return AVERROR_EOF;
@@ -670,62 +670,62 @@ int ff_v4l2_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt)
         return AVERROR(EAGAIN);
     }
 
-    return ff_v4l2_buffer_buf_to_avpkt(pkt, avbuf);
+    return ff_v4l2_m2m_exp_buffer_buf_to_avpkt(pkt, avbuf);
 }
 
-int ff_v4l2_context_get_format(V4L2Context* ctx, int probe)
+int ff_v4l2_m2m_exp_context_get_format(V4L2Context* ctx, int probe)
 {
     struct v4l2_format_update fmt = { 0 };
     int ret;
 
     if  (ctx->av_codec_id == AV_CODEC_ID_RAWVIDEO) {
-        ret = v4l2_get_raw_format(ctx, &fmt.av_fmt);
+        ret = v4l2_m2m_exp_get_raw_format(ctx, &fmt.av_fmt);
         if (ret)
             return ret;
 
         fmt.update_avfmt = !probe;
-        v4l2_save_to_context(ctx, &fmt);
+        v4l2_m2m_exp_save_to_context(ctx, &fmt);
 
         /* format has been tried already */
         return ret;
     }
 
-    ret = v4l2_get_coded_format(ctx, &fmt.v4l2_fmt);
+    ret = v4l2_m2m_exp_get_coded_format(ctx, &fmt.v4l2_m2m_exp_fmt);
     if (ret)
         return ret;
 
     fmt.update_v4l2 = 1;
-    v4l2_save_to_context(ctx, &fmt);
+    v4l2_m2m_exp_save_to_context(ctx, &fmt);
 
     return ioctl(ctx_to_m2mctx(ctx)->fd, VIDIOC_TRY_FMT, &ctx->format);
 }
 
-int ff_v4l2_context_set_format(V4L2Context* ctx)
+int ff_v4l2_m2m_exp_context_set_format(V4L2Context* ctx)
 {
     return ioctl(ctx_to_m2mctx(ctx)->fd, VIDIOC_S_FMT, &ctx->format);
 }
 
-void ff_v4l2_context_release(V4L2Context* ctx)
+void ff_v4l2_m2m_exp_context_release(V4L2Context* ctx)
 {
     int ret;
 
     if (!ctx->buffers)
         return;
 
-    ret = v4l2_release_buffers(ctx);
+    ret = v4l2_m2m_exp_release_buffers(ctx);
     if (ret)
         av_log(logger(ctx), AV_LOG_WARNING, "V4L2 failed to unmap the %s buffers\n", ctx->name);
 
     av_freep(&ctx->buffers);
 }
 
-int ff_v4l2_context_init(V4L2Context* ctx)
+int ff_v4l2_m2m_exp_context_init(V4L2Context* ctx)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);
     struct v4l2_requestbuffers req;
     int ret, i;
 
-    if (!v4l2_type_supported(ctx)) {
+    if (!v4l2_m2m_exp_type_supported(ctx)) {
         av_log(logger(ctx), AV_LOG_ERROR, "type %i not supported\n", ctx->type);
         return AVERROR_PATCHWELCOME;
     }
@@ -753,7 +753,7 @@ int ff_v4l2_context_init(V4L2Context* ctx)
 
     for (i = 0; i < req.count; i++) {
         ctx->buffers[i].context = ctx;
-        ret = ff_v4l2_buffer_initialize(&ctx->buffers[i], i);
+        ret = ff_v4l2_m2m_exp_buffer_initialize(&ctx->buffers[i], i);
         if (ret < 0) {
             av_log(logger(ctx), AV_LOG_ERROR, "%s buffer[%d] initialization (%s)\n", ctx->name, i, av_err2str(ret));
             goto error;
@@ -763,15 +763,15 @@ int ff_v4l2_context_init(V4L2Context* ctx)
     av_log(logger(ctx), AV_LOG_DEBUG, "%s: %s %02d buffers initialized: %04ux%04u, sizeimage %08u, bytesperline %08u\n", ctx->name,
         V4L2_TYPE_IS_MULTIPLANAR(ctx->type) ? av_fourcc2str(ctx->format.fmt.pix_mp.pixelformat) : av_fourcc2str(ctx->format.fmt.pix.pixelformat),
         req.count,
-        v4l2_get_width(&ctx->format),
-        v4l2_get_height(&ctx->format),
+        v4l2_m2m_exp_get_width(&ctx->format),
+        v4l2_m2m_exp_get_height(&ctx->format),
         V4L2_TYPE_IS_MULTIPLANAR(ctx->type) ? ctx->format.fmt.pix_mp.plane_fmt[0].sizeimage : ctx->format.fmt.pix.sizeimage,
         V4L2_TYPE_IS_MULTIPLANAR(ctx->type) ? ctx->format.fmt.pix_mp.plane_fmt[0].bytesperline : ctx->format.fmt.pix.bytesperline);
 
     return 0;
 
 error:
-    v4l2_release_buffers(ctx);
+    v4l2_m2m_exp_release_buffers(ctx);
 
     av_freep(&ctx->buffers);
 

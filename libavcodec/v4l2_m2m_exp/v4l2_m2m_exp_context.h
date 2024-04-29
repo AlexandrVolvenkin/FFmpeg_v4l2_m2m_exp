@@ -31,7 +31,7 @@
 #include "libavutil/pixfmt.h"
 #include "libavutil/frame.h"
 #include "libavutil/buffer.h"
-#include "v4l2_buffers.h"
+#include "v4l2_m2m_exp_buffers.h"
 
 typedef struct V4L2Context {
     /**
@@ -100,7 +100,7 @@ typedef struct V4L2Context {
  * @param[in] ctx A pointer to a V4L2Context. See V4L2Context description for required variables.
  * @return 0 in case of success, a negative value representing the error otherwise.
  */
-int ff_v4l2_context_init(V4L2Context* ctx);
+int ff_v4l2_m2m_exp_context_init(V4L2Context* ctx);
 
 /**
  * Sets the V4L2Context format in the v4l2 driver.
@@ -108,7 +108,7 @@ int ff_v4l2_context_init(V4L2Context* ctx);
  * @param[in] ctx A pointer to a V4L2Context. See V4L2Context description for required variables.
  * @return 0 in case of success, a negative value representing the error otherwise.
  */
-int ff_v4l2_context_set_format(V4L2Context* ctx);
+int ff_v4l2_m2m_exp_context_set_format(V4L2Context* ctx);
 
 /**
  * Queries the driver for a valid v4l2 format and copies it to the context.
@@ -117,7 +117,7 @@ int ff_v4l2_context_set_format(V4L2Context* ctx);
  * @param[in] probe Probe only and ignore changes to the format.
  * @return 0 in case of success, a negative value representing the error otherwise.
  */
-int ff_v4l2_context_get_format(V4L2Context* ctx, int probe);
+int ff_v4l2_m2m_exp_context_get_format(V4L2Context* ctx, int probe);
 
 /**
  * Releases a V4L2Context.
@@ -126,7 +126,7 @@ int ff_v4l2_context_get_format(V4L2Context* ctx, int probe);
  *               The caller is reponsible for freeing it.
  *               It must not be used after calling this function.
  */
-void ff_v4l2_context_release(V4L2Context* ctx);
+void ff_v4l2_m2m_exp_context_release(V4L2Context* ctx);
 
 /**
  * Sets the status of a V4L2Context.
@@ -137,7 +137,7 @@ void ff_v4l2_context_release(V4L2Context* ctx);
  *                those frames will be dropped.
  * @return 0 in case of success, a negative value representing the error otherwise.
  */
-int ff_v4l2_context_set_status(V4L2Context* ctx, uint32_t cmd);
+int ff_v4l2_m2m_exp_context_set_status(V4L2Context* ctx, uint32_t cmd);
 
 /**
  * Dequeues a buffer from a V4L2Context to an AVPacket.
@@ -147,7 +147,7 @@ int ff_v4l2_context_set_status(V4L2Context* ctx, uint32_t cmd);
  * @param[inout] pkt The AVPacket to dequeue to.
  * @return 0 in case of success, AVERROR(EAGAIN) if no buffer was ready, another negative error in case of error.
  */
-int ff_v4l2_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt);
+int ff_v4l2_m2m_exp_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt);
 
 /**
  * Dequeues a buffer from a V4L2Context to an AVFrame.
@@ -158,7 +158,7 @@ int ff_v4l2_context_dequeue_packet(V4L2Context* ctx, AVPacket* pkt);
  * @param[in] timeout The timeout for dequeue (-1 to block, 0 to return immediately, or milliseconds)
  * @return 0 in case of success, AVERROR(EAGAIN) if no buffer was ready, another negative error in case of error.
  */
-int ff_v4l2_context_dequeue_frame(V4L2Context* ctx, AVFrame* f, int timeout);
+int ff_v4l2_m2m_exp_context_dequeue_frame(V4L2Context* ctx, AVFrame* f, int timeout);
 
 /**
  * Enqueues a buffer to a V4L2Context from an AVPacket
@@ -170,7 +170,7 @@ int ff_v4l2_context_dequeue_frame(V4L2Context* ctx, AVFrame* f, int timeout);
  * @param[in] pkt A pointer to an AVPacket.
  * @return 0 in case of success, a negative error otherwise.
  */
-int ff_v4l2_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt);
+int ff_v4l2_m2m_exp_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt);
 
 /**
  * Enqueues a buffer to a V4L2Context from an AVFrame
@@ -181,6 +181,6 @@ int ff_v4l2_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt);
  * @param[in] f A pointer to an AVFrame to enqueue.
  * @return 0 in case of success, a negative error otherwise.
  */
-int ff_v4l2_context_enqueue_frame(V4L2Context* ctx, const AVFrame* f);
+int ff_v4l2_m2m_exp_context_enqueue_frame(V4L2Context* ctx, const AVFrame* f);
 
 #endif // AVCODEC_V4L2_CONTEXT_H

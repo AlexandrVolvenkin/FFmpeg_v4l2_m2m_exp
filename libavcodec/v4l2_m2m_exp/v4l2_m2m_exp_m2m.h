@@ -30,7 +30,7 @@
 #include <linux/videodev2.h>
 
 #include "libavcodec/avcodec.h"
-#include "v4l2_context.h"
+#include "v4l2_m2m_exp_context.h"
 
 #define container_of(ptr, type, member) ({ \
         const __typeof__(((type *)0)->member ) *__mptr = (ptr); \
@@ -86,7 +86,7 @@ typedef struct V4L2m2mPriv {
  *
  * @returns 0 in success, a negative error code otherwise.
  */
-int ff_v4l2_m2m_create_context(V4L2m2mPriv *priv, V4L2m2mContext **s);
+int ff_v4l2_m2m_exp_m2m_create_context(V4L2m2mPriv *priv, V4L2m2mContext **s);
 
 
 /**
@@ -96,7 +96,7 @@ int ff_v4l2_m2m_create_context(V4L2m2mPriv *priv, V4L2m2mContext **s);
  *
  * @returns 0 if a driver is found, a negative number otherwise.
  */
-int ff_v4l2_m2m_codec_init(V4L2m2mPriv *priv);
+int ff_v4l2_m2m_exp_m2m_codec_init(V4L2m2mPriv *priv);
 
 /**
  * Releases all the codec resources if all AVBufferRefs have been returned to the
@@ -107,7 +107,7 @@ int ff_v4l2_m2m_codec_init(V4L2m2mPriv *priv);
  * @returns 0
  *
  */
-int ff_v4l2_m2m_codec_end(V4L2m2mPriv *priv);
+int ff_v4l2_m2m_exp_m2m_codec_end(V4L2m2mPriv *priv);
 
 /**
  * Reinitializes the V4L2m2mContext when the driver cannot continue processing
@@ -117,7 +117,7 @@ int ff_v4l2_m2m_codec_end(V4L2m2mPriv *priv);
  *
  * @returns 0 in case of success, negative number otherwise
  */
-int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *ctx);
+int ff_v4l2_m2m_exp_m2m_codec_reinit(V4L2m2mContext *ctx);
 
 /**
  * Reinitializes the V4L2m2mContext when the driver cannot continue processing
@@ -127,6 +127,6 @@ int ff_v4l2_m2m_codec_reinit(V4L2m2mContext *ctx);
  *
  * @returns 0 in case of success, negative number otherwise
  */
-int ff_v4l2_m2m_codec_full_reinit(V4L2m2mContext *ctx);
+int ff_v4l2_m2m_exp_m2m_codec_full_reinit(V4L2m2mContext *ctx);
 
 #endif /* AVCODEC_V4L2_M2M_H */
