@@ -34,7 +34,7 @@
 #include "v4l2_m2m_exp_m2m.h"
 
 struct v4l2_format_update {
-    uint32_t v4l2_m2m_exp_fmt;
+    uint32_t v4l2_fmt;
     int update_v4l2;
 
     enum AVPixelFormat av_fmt;
@@ -134,7 +134,7 @@ static inline void v4l2_m2m_exp_save_to_context(V4L2Context* ctx, struct v4l2_fo
         ctx->format.fmt.pix_mp.height = ctx->height;
         ctx->format.fmt.pix_mp.width = ctx->width;
         if (fmt->update_v4l2) {
-            ctx->format.fmt.pix_mp.pixelformat = fmt->v4l2_m2m_exp_fmt;
+            ctx->format.fmt.pix_mp.pixelformat = fmt->v4l2_fmt;
 
             /* s5p-mfc requires the user to specify a buffer size */
             ctx->format.fmt.pix_mp.plane_fmt[0].sizeimage =
@@ -144,7 +144,7 @@ static inline void v4l2_m2m_exp_save_to_context(V4L2Context* ctx, struct v4l2_fo
         ctx->format.fmt.pix.height = ctx->height;
         ctx->format.fmt.pix.width = ctx->width;
         if (fmt->update_v4l2) {
-            ctx->format.fmt.pix.pixelformat = fmt->v4l2_m2m_exp_fmt;
+            ctx->format.fmt.pix.pixelformat = fmt->v4l2_fmt;
 
             /* s5p-mfc requires the user to specify a buffer size */
             ctx->format.fmt.pix.sizeimage =
@@ -476,17 +476,17 @@ static int v4l2_m2m_exp_release_buffers(V4L2Context* ctx)
 static inline int v4l2_m2m_exp_try_raw_format(V4L2Context* ctx, enum AVPixelFormat pixfmt)
 {
     struct v4l2_format *fmt = &ctx->format;
-    uint32_t v4l2_m2m_exp_fmt;
+    uint32_t v4l2_fmt;
     int ret;
 
-    v4l2_m2m_exp_fmt = ff_v4l2_m2m_exp_format_avfmt_to_v4l2(pixfmt);
-    if (!v4l2_m2m_exp_fmt)
+    v4l2_fmt = ff_v4l2_m2m_exp_format_avfmt_to_v4l2(pixfmt);
+    if (!v4l2_fmt)
         return AVERROR(EINVAL);
 
     if (V4L2_TYPE_IS_MULTIPLANAR(ctx->type))
-        fmt->fmt.pix_mp.pixelformat = v4l2_m2m_exp_fmt;
+        fmt->fmt.pix_mp.pixelformat = v4l2_fmt;
     else
-        fmt->fmt.pix.pixelformat = v4l2_m2m_exp_fmt;
+        fmt->fmt.pix.pixelformat = v4l2_fmt;
 
     fmt->type = ctx->type;
 
@@ -535,12 +535,12 @@ static int v4l2_m2m_exp_get_raw_format(V4L2Context* ctx, enum AVPixelFormat *p)
 static int v4l2_m2m_exp_get_coded_format(V4L2Context* ctx, uint32_t *p)
 {
     struct v4l2_fmtdesc fdesc;
-    uint32_t v4l2_m2m_exp_fmt;
+    uint32_t v4l2_fmt;
     int ret;
 
     /* translate to a valid v4l2 format */
-    v4l2_m2m_exp_fmt = ff_v4l2_m2m_exp_format_avcodec_to_v4l2(ctx->av_codec_id);
-    if (!v4l2_m2m_exp_fmt)
+    v4l2_fmt = ff_v4l2_m2m_exp_format_avcodec_to_v4l2(ctx->av_codec_id);
+    if (!v4l2_fmt)
         return AVERROR(EINVAL);
 
     /* check if the driver supports this format */
@@ -552,13 +552,13 @@ static int v4l2_m2m_exp_get_coded_format(V4L2Context* ctx, uint32_t *p)
         if (ret)
             return AVERROR(EINVAL);
 
-        if (fdesc.pixelformat == v4l2_m2m_exp_fmt)
+        if (fdesc.pixelformat == v4l2_fmt)
             break;
 
         fdesc.index++;
     }
 
-    *p = v4l2_m2m_exp_fmt;
+    *p = v4l2_fmt;
 
     return 0;
 }
@@ -604,6 +604,13 @@ int ff_v4l2_m2m_exp_context_enqueue_frame(V4L2Context* ctx, const AVFrame* frame
     ret = ff_v4l2_m2m_exp_buffer_avframe_to_buf(frame, avbuf);
     if (ret)
         return ret;
+
+    if (avbuf->buf.type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+        avbuf->buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+        avbuf->buf.memory = V4L2_MEMORY_DMABUF;
+        avbuf->buf.m.fd = frame->data[0];
+        avbuf->buf.flags = 0;
+    }
 
     return ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
 }
@@ -690,7 +697,7 @@ int ff_v4l2_m2m_exp_context_get_format(V4L2Context* ctx, int probe)
         return ret;
     }
 
-    ret = v4l2_m2m_exp_get_coded_format(ctx, &fmt.v4l2_m2m_exp_fmt);
+    ret = v4l2_m2m_exp_get_coded_format(ctx, &fmt.v4l2_fmt);
     if (ret)
         return ret;
 

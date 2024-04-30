@@ -101,7 +101,7 @@ static inline unsigned int v4l2_m2m_exp_h264_profile_from_ff(int p)
 {
     static const struct h264_profile  {
         unsigned int ffmpeg_val;
-        unsigned int v4l2_m2m_exp_val;
+        unsigned int v4l2_val;
     } profile[] = {
         { FF_PROFILE_H264_CONSTRAINED_BASELINE, MPEG_VIDEO(H264_PROFILE_CONSTRAINED_BASELINE) },
         { FF_PROFILE_H264_HIGH_444_PREDICTIVE, MPEG_VIDEO(H264_PROFILE_HIGH_444_PREDICTIVE) },
@@ -119,7 +119,7 @@ static inline unsigned int v4l2_m2m_exp_h264_profile_from_ff(int p)
 
     for (i = 0; i < FF_ARRAY_ELEMS(profile); i++) {
         if (profile[i].ffmpeg_val == p)
-            return profile[i].v4l2_m2m_exp_val;
+            return profile[i].v4l2_val;
     }
     return AVERROR(ENOENT);
 }
@@ -128,7 +128,7 @@ static inline int v4l2_m2m_exp_mpeg4_profile_from_ff(int p)
 {
     static const struct mpeg4_profile {
         unsigned int ffmpeg_val;
-        unsigned int v4l2_m2m_exp_val;
+        unsigned int v4l2_val;
     } profile[] = {
         { FF_PROFILE_MPEG4_ADVANCED_CODING, MPEG_VIDEO(MPEG4_PROFILE_ADVANCED_CODING_EFFICIENCY) },
         { FF_PROFILE_MPEG4_ADVANCED_SIMPLE, MPEG_VIDEO(MPEG4_PROFILE_ADVANCED_SIMPLE) },
@@ -140,7 +140,7 @@ static inline int v4l2_m2m_exp_mpeg4_profile_from_ff(int p)
 
     for (i = 0; i < FF_ARRAY_ELEMS(profile); i++) {
         if (profile[i].ffmpeg_val == p)
-            return profile[i].v4l2_m2m_exp_val;
+            return profile[i].v4l2_val;
     }
     return AVERROR(ENOENT);
 }
@@ -337,7 +337,7 @@ static av_cold int v4l2_m2m_exp_encode_init(AVCodecContext *avctx)
     V4L2m2mContext *s;
     V4L2m2mPriv *priv = avctx->priv_data;
     enum AVPixelFormat pix_fmt_output;
-    uint32_t v4l2_m2m_exp_fmt_output;
+    uint32_t v4l2_fmt_output;
     int ret;
 
     ret = ff_v4l2_m2m_exp_m2m_create_context(priv, &s);
@@ -367,11 +367,11 @@ static av_cold int v4l2_m2m_exp_encode_init(AVCodecContext *avctx)
     }
 
     if (V4L2_TYPE_IS_MULTIPLANAR(output->type))
-        v4l2_m2m_exp_fmt_output = output->format.fmt.pix_mp.pixelformat;
+        v4l2_fmt_output = output->format.fmt.pix_mp.pixelformat;
     else
-        v4l2_m2m_exp_fmt_output = output->format.fmt.pix.pixelformat;
+        v4l2_fmt_output = output->format.fmt.pix.pixelformat;
 
-    pix_fmt_output = ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(v4l2_m2m_exp_fmt_output, AV_CODEC_ID_RAWVIDEO);
+    pix_fmt_output = ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(v4l2_fmt_output, AV_CODEC_ID_RAWVIDEO);
     if (pix_fmt_output != avctx->pix_fmt) {
         const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt_output);
         av_log(avctx, AV_LOG_ERROR, "Encoder requires %s pixel format.\n", desc->name);
