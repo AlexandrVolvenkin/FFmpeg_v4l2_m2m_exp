@@ -40,8 +40,8 @@ static AVRational v4l2_m2m_exp_timebase = { 1, USEC_PER_SEC };
 static inline V4L2m2mContext *buf_to_m2mctx(V4L2Buffer *buf)
 {
     return V4L2_TYPE_IS_OUTPUT(buf->context->type) ?
-        container_of(buf->context, V4L2m2mContext, output) :
-        container_of(buf->context, V4L2m2mContext, capture);
+           container_of(buf->context, V4L2m2mContext, output) :
+           container_of(buf->context, V4L2m2mContext, capture);
 }
 
 static inline AVCodecContext *logger(V4L2Buffer *buf)
@@ -77,7 +77,7 @@ static inline int64_t v4l2_m2m_exp_get_pts(V4L2Buffer *avbuf)
 
     /* convert pts back to encoder timebase */
     v4l2_pts = (int64_t)avbuf->buf.timestamp.tv_sec * USEC_PER_SEC +
-                        avbuf->buf.timestamp.tv_usec;
+               avbuf->buf.timestamp.tv_usec;
 
     return av_rescale_q(v4l2_pts, v4l2_m2m_exp_timebase, v4l2_m2m_exp_get_timebase(avbuf));
 }
@@ -88,27 +88,33 @@ static enum AVColorPrimaries v4l2_m2m_exp_get_color_primaries(V4L2Buffer *buf)
     enum v4l2_colorspace cs;
 
     cs = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.colorspace :
-        buf->context->format.fmt.pix.colorspace;
+         buf->context->format.fmt.pix_mp.colorspace :
+         buf->context->format.fmt.pix.colorspace;
 
     ycbcr = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.ycbcr_enc:
-        buf->context->format.fmt.pix.ycbcr_enc;
+            buf->context->format.fmt.pix_mp.ycbcr_enc:
+            buf->context->format.fmt.pix.ycbcr_enc;
 
     switch(ycbcr) {
     case V4L2_YCBCR_ENC_XV709:
-    case V4L2_YCBCR_ENC_709: return AVCOL_PRI_BT709;
+    case V4L2_YCBCR_ENC_709:
+        return AVCOL_PRI_BT709;
     case V4L2_YCBCR_ENC_XV601:
-    case V4L2_YCBCR_ENC_601:return AVCOL_PRI_BT470M;
+    case V4L2_YCBCR_ENC_601:
+        return AVCOL_PRI_BT470M;
     default:
         break;
     }
 
     switch(cs) {
-    case V4L2_COLORSPACE_470_SYSTEM_BG: return AVCOL_PRI_BT470BG;
-    case V4L2_COLORSPACE_SMPTE170M: return AVCOL_PRI_SMPTE170M;
-    case V4L2_COLORSPACE_SMPTE240M: return AVCOL_PRI_SMPTE240M;
-    case V4L2_COLORSPACE_BT2020: return AVCOL_PRI_BT2020;
+    case V4L2_COLORSPACE_470_SYSTEM_BG:
+        return AVCOL_PRI_BT470BG;
+    case V4L2_COLORSPACE_SMPTE170M:
+        return AVCOL_PRI_SMPTE170M;
+    case V4L2_COLORSPACE_SMPTE240M:
+        return AVCOL_PRI_SMPTE240M;
+    case V4L2_COLORSPACE_BT2020:
+        return AVCOL_PRI_BT2020;
     default:
         break;
     }
@@ -121,17 +127,19 @@ static enum AVColorRange v4l2_m2m_exp_get_color_range(V4L2Buffer *buf)
     enum v4l2_quantization qt;
 
     qt = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.quantization :
-        buf->context->format.fmt.pix.quantization;
+         buf->context->format.fmt.pix_mp.quantization :
+         buf->context->format.fmt.pix.quantization;
 
     switch (qt) {
-    case V4L2_QUANTIZATION_LIM_RANGE: return AVCOL_RANGE_MPEG;
-    case V4L2_QUANTIZATION_FULL_RANGE: return AVCOL_RANGE_JPEG;
+    case V4L2_QUANTIZATION_LIM_RANGE:
+        return AVCOL_RANGE_MPEG;
+    case V4L2_QUANTIZATION_FULL_RANGE:
+        return AVCOL_RANGE_JPEG;
     default:
         break;
     }
 
-     return AVCOL_RANGE_UNSPECIFIED;
+    return AVCOL_RANGE_UNSPECIFIED;
 }
 
 static enum AVColorSpace v4l2_m2m_exp_get_color_space(V4L2Buffer *buf)
@@ -140,25 +148,31 @@ static enum AVColorSpace v4l2_m2m_exp_get_color_space(V4L2Buffer *buf)
     enum v4l2_colorspace cs;
 
     cs = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.colorspace :
-        buf->context->format.fmt.pix.colorspace;
+         buf->context->format.fmt.pix_mp.colorspace :
+         buf->context->format.fmt.pix.colorspace;
 
     ycbcr = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.ycbcr_enc:
-        buf->context->format.fmt.pix.ycbcr_enc;
+            buf->context->format.fmt.pix_mp.ycbcr_enc:
+            buf->context->format.fmt.pix.ycbcr_enc;
 
     switch(cs) {
-    case V4L2_COLORSPACE_SRGB: return AVCOL_SPC_RGB;
-    case V4L2_COLORSPACE_REC709: return AVCOL_SPC_BT709;
-    case V4L2_COLORSPACE_470_SYSTEM_M: return AVCOL_SPC_FCC;
-    case V4L2_COLORSPACE_470_SYSTEM_BG: return AVCOL_SPC_BT470BG;
-    case V4L2_COLORSPACE_SMPTE170M: return AVCOL_SPC_SMPTE170M;
-    case V4L2_COLORSPACE_SMPTE240M: return AVCOL_SPC_SMPTE240M;
+    case V4L2_COLORSPACE_SRGB:
+        return AVCOL_SPC_RGB;
+    case V4L2_COLORSPACE_REC709:
+        return AVCOL_SPC_BT709;
+    case V4L2_COLORSPACE_470_SYSTEM_M:
+        return AVCOL_SPC_FCC;
+    case V4L2_COLORSPACE_470_SYSTEM_BG:
+        return AVCOL_SPC_BT470BG;
+    case V4L2_COLORSPACE_SMPTE170M:
+        return AVCOL_SPC_SMPTE170M;
+    case V4L2_COLORSPACE_SMPTE240M:
+        return AVCOL_SPC_SMPTE240M;
     case V4L2_COLORSPACE_BT2020:
         if (ycbcr == V4L2_YCBCR_ENC_BT2020_CONST_LUM)
             return AVCOL_SPC_BT2020_CL;
         else
-             return AVCOL_SPC_BT2020_NCL;
+            return AVCOL_SPC_BT2020_NCL;
     default:
         break;
     }
@@ -173,36 +187,43 @@ static enum AVColorTransferCharacteristic v4l2_m2m_exp_get_color_trc(V4L2Buffer 
     enum v4l2_colorspace cs;
 
     cs = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.colorspace :
-        buf->context->format.fmt.pix.colorspace;
+         buf->context->format.fmt.pix_mp.colorspace :
+         buf->context->format.fmt.pix.colorspace;
 
     ycbcr = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.ycbcr_enc:
-        buf->context->format.fmt.pix.ycbcr_enc;
+            buf->context->format.fmt.pix_mp.ycbcr_enc:
+            buf->context->format.fmt.pix.ycbcr_enc;
 
     xfer = V4L2_TYPE_IS_MULTIPLANAR(buf->buf.type) ?
-        buf->context->format.fmt.pix_mp.xfer_func:
-        buf->context->format.fmt.pix.xfer_func;
+           buf->context->format.fmt.pix_mp.xfer_func:
+           buf->context->format.fmt.pix.xfer_func;
 
     switch (xfer) {
-    case V4L2_XFER_FUNC_709: return AVCOL_TRC_BT709;
-    case V4L2_XFER_FUNC_SRGB: return AVCOL_TRC_IEC61966_2_1;
+    case V4L2_XFER_FUNC_709:
+        return AVCOL_TRC_BT709;
+    case V4L2_XFER_FUNC_SRGB:
+        return AVCOL_TRC_IEC61966_2_1;
     default:
         break;
     }
 
     switch (cs) {
-    case V4L2_COLORSPACE_470_SYSTEM_M: return AVCOL_TRC_GAMMA22;
-    case V4L2_COLORSPACE_470_SYSTEM_BG: return AVCOL_TRC_GAMMA28;
-    case V4L2_COLORSPACE_SMPTE170M: return AVCOL_TRC_SMPTE170M;
-    case V4L2_COLORSPACE_SMPTE240M: return AVCOL_TRC_SMPTE240M;
+    case V4L2_COLORSPACE_470_SYSTEM_M:
+        return AVCOL_TRC_GAMMA22;
+    case V4L2_COLORSPACE_470_SYSTEM_BG:
+        return AVCOL_TRC_GAMMA28;
+    case V4L2_COLORSPACE_SMPTE170M:
+        return AVCOL_TRC_SMPTE170M;
+    case V4L2_COLORSPACE_SMPTE240M:
+        return AVCOL_TRC_SMPTE240M;
     default:
         break;
     }
 
     switch (ycbcr) {
     case V4L2_YCBCR_ENC_XV709:
-    case V4L2_YCBCR_ENC_XV601: return AVCOL_TRC_BT1361_ECG;
+    case V4L2_YCBCR_ENC_XV601:
+        return AVCOL_TRC_BT1361_ECG;
     default:
         break;
     }
@@ -225,8 +246,7 @@ static void v4l2_m2m_exp_free_buffer(void *opaque, uint8_t *unused)
             if (s->draining && V4L2_TYPE_IS_OUTPUT(avbuf->context->type)) {
                 /* no need to queue more buffers to the driver */
                 avbuf->status = V4L2BUF_AVAILABLE;
-            }
-            else if (avbuf->context->streamon)
+            } else if (avbuf->context->streamon)
                 ff_v4l2_m2m_exp_buffer_enqueue(avbuf);
         }
 
@@ -532,11 +552,16 @@ int ff_v4l2_m2m_exp_buffer_initialize(V4L2Buffer* avbuf, int index)
 
         if (V4L2_TYPE_IS_MULTIPLANAR(ctx->type)) {
             if (ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+
             } else {
                 avbuf->plane_info[i].length = avbuf->buf.m.planes[i].length;
                 avbuf->plane_info[i].mm_addr = mmap(NULL, avbuf->buf.m.planes[i].length,
                                                     PROT_READ | PROT_WRITE, MAP_SHARED,
                                                     buf_to_m2mctx(avbuf)->fd, avbuf->buf.m.planes[i].m.mem_offset);
+
+                if (avbuf->plane_info[i].mm_addr == MAP_FAILED) {
+                    return AVERROR(ENOMEM);
+                }
             }
         } else {
             if (ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -546,6 +571,10 @@ int ff_v4l2_m2m_exp_buffer_initialize(V4L2Buffer* avbuf, int index)
                 avbuf->plane_info[i].mm_addr = mmap(NULL, avbuf->buf.length,
                                                     PROT_READ | PROT_WRITE, MAP_SHARED,
                                                     buf_to_m2mctx(avbuf)->fd, avbuf->buf.m.offset);
+
+                if (avbuf->plane_info[i].mm_addr == MAP_FAILED) {
+                    return AVERROR(ENOMEM);
+                }
             }
         }
     }
