@@ -32,7 +32,7 @@
 static const struct fmt_conversion {
     enum AVPixelFormat avfmt;
     enum AVCodecID avcodec;
-    uint32_t v4l2_m2m_exp_fmt;
+    uint32_t v4l2_fmt;
 } fmt_map[] = {
     { AV_FMT(RGB555LE),    AV_CODEC(RAWVIDEO),    V4L2_FMT(RGB555) },
     { AV_FMT(RGB555BE),    AV_CODEC(RAWVIDEO),    V4L2_FMT(RGB555X) },
@@ -114,7 +114,7 @@ uint32_t ff_v4l2_m2m_exp_format_avcodec_to_v4l2(enum AVCodecID avcodec)
     int i;
     for (i = 0; i < FF_ARRAY_ELEMS(fmt_map); i++) {
         if (fmt_map[i].avcodec == avcodec)
-            return fmt_map[i].v4l2_m2m_exp_fmt;
+            return fmt_map[i].v4l2_fmt;
     }
     return 0;
 }
@@ -124,17 +124,17 @@ uint32_t ff_v4l2_m2m_exp_format_avfmt_to_v4l2(enum AVPixelFormat avfmt)
     int i;
     for (i = 0; i < FF_ARRAY_ELEMS(fmt_map); i++) {
         if (fmt_map[i].avfmt == avfmt)
-            return fmt_map[i].v4l2_m2m_exp_fmt;
+            return fmt_map[i].v4l2_fmt;
     }
     return 0;
 }
 
-enum AVPixelFormat ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(uint32_t v4l2_m2m_exp_fmt, enum AVCodecID avcodec)
+enum AVPixelFormat ff_v4l2_m2m_exp_format_v4l2_m2m_exp_to_avfmt(uint32_t v4l2_fmt, enum AVCodecID avcodec)
 {
     int i;
     for (i = 0; i < FF_ARRAY_ELEMS(fmt_map); i++) {
         if (fmt_map[i].avcodec  == avcodec &&
-            fmt_map[i].v4l2_m2m_exp_fmt == v4l2_m2m_exp_fmt)
+            fmt_map[i].v4l2_fmt == v4l2_fmt)
             return fmt_map[i].avfmt;
     }
     return AV_PIX_FMT_NONE;

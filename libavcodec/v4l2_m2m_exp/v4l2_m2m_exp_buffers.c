@@ -60,26 +60,26 @@ static inline AVRational v4l2_m2m_exp_get_timebase(V4L2Buffer *avbuf)
 
 static inline void v4l2_m2m_exp_set_pts(V4L2Buffer *out, int64_t pts)
 {
-    int64_t v4l2_m2m_exp_pts;
+    int64_t v4l2_pts;
 
     if (pts == AV_NOPTS_VALUE)
         pts = 0;
 
     /* convert pts to v4l2 timebase */
-    v4l2_m2m_exp_pts = av_rescale_q(pts, v4l2_m2m_exp_get_timebase(out), v4l2_m2m_exp_timebase);
-    out->buf.timestamp.tv_usec = v4l2_m2m_exp_pts % USEC_PER_SEC;
-    out->buf.timestamp.tv_sec = v4l2_m2m_exp_pts / USEC_PER_SEC;
+    v4l2_pts = av_rescale_q(pts, v4l2_m2m_exp_get_timebase(out), v4l2_m2m_exp_timebase);
+    out->buf.timestamp.tv_usec = v4l2_pts % USEC_PER_SEC;
+    out->buf.timestamp.tv_sec = v4l2_pts / USEC_PER_SEC;
 }
 
 static inline int64_t v4l2_m2m_exp_get_pts(V4L2Buffer *avbuf)
 {
-    int64_t v4l2_m2m_exp_pts;
+    int64_t v4l2_pts;
 
     /* convert pts back to encoder timebase */
-    v4l2_m2m_exp_pts = (int64_t)avbuf->buf.timestamp.tv_sec * USEC_PER_SEC +
+    v4l2_pts = (int64_t)avbuf->buf.timestamp.tv_sec * USEC_PER_SEC +
                         avbuf->buf.timestamp.tv_usec;
 
-    return av_rescale_q(v4l2_m2m_exp_pts, v4l2_m2m_exp_timebase, v4l2_m2m_exp_get_timebase(avbuf));
+    return av_rescale_q(v4l2_pts, v4l2_m2m_exp_timebase, v4l2_m2m_exp_get_timebase(avbuf));
 }
 
 static enum AVColorPrimaries v4l2_m2m_exp_get_color_primaries(V4L2Buffer *buf)
@@ -284,7 +284,7 @@ static int v4l2_m2m_exp_bufref_to_buf(V4L2Buffer *out, int plane, const uint8_t*
     length = out->plane_info[plane].length;
     bytesused = FFMIN(size+offset, length);
 
-    memcpy((uint8_t*)out->plane_info[plane].mm_addr+offset, data, FFMIN(size, length-offset));
+//    memcpy((uint8_t*)out->plane_info[plane].mm_addr+offset, data, FFMIN(size, length-offset));
 
     if (V4L2_TYPE_IS_MULTIPLANAR(out->buf.type)) {
         out->planes[plane].bytesused = bytesused;
