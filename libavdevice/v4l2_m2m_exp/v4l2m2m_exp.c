@@ -574,7 +574,7 @@ static int mmap_read_frame(AVFormatContext *ctx, AVPacket *pkt)
             enqueue_buffer(s, &buf);
             return res;
         }
-        memcpy(pkt->data, s->buf_start[buf.index], buf.bytesused);
+//        memcpy(pkt->data, s->buf_start[buf.index], buf.bytesused);
 
         res = enqueue_buffer(s, &buf);
         if (res) {
@@ -611,6 +611,7 @@ static int mmap_read_frame(AVFormatContext *ctx, AVPacket *pkt)
     }
     pkt->pts = buf_ts.tv_sec * INT64_C(1000000) + buf_ts.tv_usec;
     convert_timestamp(ctx, &pkt->pts);
+    pkt->data = exp_buf_fd_exp[buf.index];
 
     return pkt->size;
 }
