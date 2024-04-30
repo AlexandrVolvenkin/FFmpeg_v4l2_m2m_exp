@@ -110,6 +110,8 @@ struct buff_data {
     int index;
 };
 
+int exp_buf_fd_exp[256];
+
 static int device_open(AVFormatContext *ctx, const char* device_path)
 {
     struct video_data *s = ctx->priv_data;
