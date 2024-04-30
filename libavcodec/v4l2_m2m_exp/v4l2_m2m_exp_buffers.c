@@ -496,7 +496,7 @@ int ff_v4l2_m2m_exp_buffer_initialize(V4L2Buffer* avbuf, int index)
     V4L2Context *ctx = avbuf->context;
     int ret, i;
 
-    avbuf->buf.memory = V4L2_MEMORY_MMAP;
+//    avbuf->buf.memory = V4L2_MEMORY_MMAP;
     avbuf->buf.type = ctx->type;
     avbuf->buf.index = index;
 
@@ -505,9 +505,14 @@ int ff_v4l2_m2m_exp_buffer_initialize(V4L2Buffer* avbuf, int index)
         avbuf->buf.m.planes = avbuf->planes;
     }
 
-    ret = ioctl(buf_to_m2mctx(avbuf)->fd, VIDIOC_QUERYBUF, &avbuf->buf);
-    if (ret < 0)
-        return AVERROR(errno);
+    if (ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+
+    } else {
+        ret = ioctl(buf_to_m2mctx(avbuf)->fd, VIDIOC_QUERYBUF, &avbuf->buf);
+        if (ret < 0) {
+            return AVERROR(errno);
+        }
+    }
 
     if (V4L2_TYPE_IS_MULTIPLANAR(ctx->type)) {
         avbuf->num_planes = 0;
