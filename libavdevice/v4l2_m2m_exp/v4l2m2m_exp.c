@@ -343,7 +343,7 @@ static int mmap_init(AVFormatContext *ctx)
     struct video_data *s = ctx->priv_data;
     struct v4l2_requestbuffers req = {
         .type   = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-        .count  = desired_video_buffers,
+        .count  = s->num_capture_buffers,
         .memory = V4L2_MEMORY_MMAP
     };
 
@@ -351,6 +351,23 @@ static int mmap_init(AVFormatContext *ctx)
         res = AVERROR(errno);
         av_log(ctx, AV_LOG_ERROR, "ioctl(VIDIOC_REQBUFS): %s\n", av_err2str(res));
         return res;
+    }
+
+    for (int i = 0; i < req.count; ++i) {
+
+        struct v4l2_exportbuffer ebuf = {
+            .index = i,
+            .type = V4L2_BUF_TYPE_VIDEO_CAPTURE
+        };
+
+        res = ioctl(s->fd, VIDIOC_EXPBUF, &ebuf);
+        if (res != 0) {
+            res = AVERROR(errno);
+            av_log(ctx, AV_LOG_ERROR, "ioctl(VIDIOC_EXPBUF): %s\n", av_err2str(res));
+            return res;
+        }
+
+        exp_buf_fd_exp[i] = ebuf.fd;
     }
 
     if (req.count < 2) {
