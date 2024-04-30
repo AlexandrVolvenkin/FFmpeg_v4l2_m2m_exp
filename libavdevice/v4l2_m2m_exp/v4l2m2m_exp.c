@@ -90,6 +90,7 @@ struct video_data {
     int list_format;    /**< Set by a private option. */
     int list_standard;  /**< Set by a private option. */
     char *framerate;    /**< Set by a private option. */
+    int num_capture_buffers;  /**< Set by a private option. */
 
     int use_libv4l2;
     int (*open_f)(const char *file, int oflag, ...);
