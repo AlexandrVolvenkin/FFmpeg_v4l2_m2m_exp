@@ -743,7 +743,11 @@ int ff_v4l2_m2m_exp_context_init(V4L2Context* ctx)
 
     memset(&req, 0, sizeof(req));
     req.count = ctx->num_buffers;
-    req.memory = V4L2_MEMORY_MMAP;
+    if (ctx->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+        req.memory = V4L2_MEMORY_DMABUF;
+    } else {
+        req.memory = V4L2_MEMORY_MMAP;
+    }
     req.type = ctx->type;
     ret = ioctl(s->fd, VIDIOC_REQBUFS, &req);
     if (ret < 0) {
