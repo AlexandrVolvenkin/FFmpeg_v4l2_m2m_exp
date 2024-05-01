@@ -24,7 +24,9 @@ https://github.com/stulluk/FFmpeg-Cedrus
 https://github.com/noblock/sunxi-cedar-mainline  
 Он работает с плагином-обёрткой: cedrus264, который реализован в этом проекте FFMpeg:  
 https://github.com/stulluk/FFmpeg-Cedrus  
-И драйвер vdpau Cedrus из Linux mainline, в котором реализован интерфейс v4l2 mem2mem, но  
+И драйвер vdpau Cedrus из Linux mainline:  
+https://elixir.bootlin.com/linux/v6.3.2/source/drivers/staging/media/sunxi/cedrus  
+в котором реализован интерфейс v4l2 mem2mem, но  
 он имеет функционал только декодера. Я портировал функционал драйвера h264 кодера Cedar в  
 пространство драйвера vdpau Cedrus. Таким образом я получил драйвер аппаратного h264 кодера  
 Cedar с интерфейсом фреймворка v4l2 mem2mem.  
@@ -79,7 +81,9 @@ I took this Cedar hardware encoder driver project as a basis:
 https://github.com/noblock/sunxi-cedar-mainline  
 It works with a wrapper plugin: cedrus264, which is implemented in this FFMpeg project:  
 https://github.com/stulluk/FFmpeg-Cedrus  
-And the vdpau Cedrus driver from Linux mainline, which implements the v4l2 mem2mem interface, but  
+And the vdpau Cedrus driver from Linux mainline:  
+https://elixir.bootlin.com/linux/v6.3.2/source/drivers/staging/media/sunxi/cedrus  
+which implements the v4l2 mem2mem interface, but  
 it has only decoder functionality. I ported the Cedar encoder h264 driver functionality to  
 vdpau Cedrus driver space. This way I got a hardware h264 encoder driver  
 Cedar with v4l2 mem2mem framework interface.  
