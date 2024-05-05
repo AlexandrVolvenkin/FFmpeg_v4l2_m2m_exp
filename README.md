@@ -1,5 +1,5 @@
 
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------  
 FFMpeg плагин-обёртка для драйвера поддерживающего интерфейс v4l2 mem2mem, аппаратного кодера Cedar, который есть в микроконтроллерах  Allwinner, в частности в v3s.  
 Я создал этот драйвер с целью переноса функционала в пространство v4l2 mem2mem и ускорения  
 работы видеоконвейера.  
@@ -42,7 +42,7 @@ Cedar с интерфейсом фреймворка v4l2 mem2mem.
 что приводит к возникновению ошиби. Теперь для нормальной работы достаточно двух буферов.  
 -num_capture_buffers 2  
  
-Плагин-обёртка кодека v4l2 mem2mem:   
+Плагин-обёртка драйвера h264 Cedrus, поддерживающего интерфейс v4l2 mem2mem, аппаратного кодера Cedar:   
 вместо h264_v4l2m2m, я создал h264_v4l2m2m_exp, в котором производится импорт буферов с   
 полученными кадрами от камеры, вместо копирования данных.   
 
@@ -99,7 +99,7 @@ I allocated 16MB and when 256 buffers are requested in the v4l2 plugin, they tak
 which results in an error. Now two buffers are enough for normal operation.  
 -num_capture_buffers 2  
  
-V4l2 mem2mem codec wrapper plugin:  
+Plugin wrapper for h264 Cedrus driver supporting v4l2 mem2mem interface, Cedar hardware encoder:  
 instead of h264_v4l2m2m, I created h264_v4l2m2m_exp, which imports buffers from  
 received frames from the camera, instead of copying data.  
 
